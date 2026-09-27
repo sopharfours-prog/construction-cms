@@ -4,8 +4,8 @@ Corporate website and content management system for a construction company.
 Public site in Lao and English, with a role-based admin CMS for projects,
 services, news, media, inquiries and quote requests.
 
-> **Status: Phase 3 of 14 (authentication).** The CMS screens and public pages
-> are built in later phases. See [Roadmap](#roadmap).
+> **Status: Phase 4 of 14 (admin shell and dashboard).** Content modules and
+> public pages are built in later phases. See [Roadmap](#roadmap).
 
 ## Stack
 
@@ -163,7 +163,7 @@ used in this project.
 1. ✅ Project initialization
 2. ✅ Database (Prisma, schema, migrations, seed)
 3. ✅ Authentication and RBAC
-4. Admin layout and dashboard
+4. ✅ Admin layout, dashboard and audit logs
 5. CMS core (projects, services, news, pages, categories, tags)
 6. Media library and object storage
 7. Contact, inquiries and quote requests
