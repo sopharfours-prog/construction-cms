@@ -17,6 +17,27 @@ const serverEnvSchema = z.object({
     .string()
     .min(1, "DATABASE_URL is required")
     .refine((url) => /^postgres(ql)?:\/\//.test(url), "Expected a postgresql:// connection URL"),
+  AUTH_SECRET: z
+    .string({ error: "AUTH_SECRET is required (generate with: npx auth secret)" })
+    .min(32, "AUTH_SECRET must be at least 32 characters"),
+  SMTP_HOST: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_SECURE: z
+    .enum(["true", "false", ""])
+    .optional()
+    .transform((v) => v === "true"),
+  SMTP_USER: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
+  SMTP_PASSWORD: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
+  SMTP_FROM: z.string().default("Construction CMS <no-reply@example.com>"),
   GOOGLE_ANALYTICS_ID: z
     .string()
     .regex(/^G-[A-Z0-9]+$/, "Expected a GA4 measurement ID such as G-XXXXXXX")
