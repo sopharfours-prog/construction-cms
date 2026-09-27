@@ -3,11 +3,18 @@ import "server-only";
 import { cookies } from "next/headers";
 
 import { defaultLocale, isLocale, type Locale } from "@/config/i18n";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const ADMIN_LOCALE_COOKIE = "admin_locale";
 
-/** Language of the admin interface: the admin's saved choice, else the default. */
+/**
+ * Language of the admin interface: this browser's choice (cookie), else the
+ * signed-in user's saved preference, else the site default.
+ */
 export async function getAdminLocale(): Promise<Locale> {
-  const value = (await cookies()).get(ADMIN_LOCALE_COOKIE)?.value;
-  return value && isLocale(value) ? value : defaultLocale;
+  const cookie = (await cookies()).get(ADMIN_LOCALE_COOKIE)?.value;
+  if (cookie && isLocale(cookie)) return cookie;
+
+  const preferred = (await getCurrentUser())?.preferredLocale;
+  return preferred && isLocale(preferred) ? preferred : defaultLocale;
 }
