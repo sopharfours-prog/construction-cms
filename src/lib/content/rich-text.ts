@@ -134,7 +134,7 @@ export const richTextField = z
       const doc = sanitizeRichText(JSON.parse(raw));
       return isRichTextEmpty(doc) ? null : doc;
     } catch {
-      ctx.addIssue({ code: "custom", error: "invalid" });
+      ctx.addIssue({ code: "custom", message: "invalid" });
       return z.NEVER;
     }
   });

@@ -58,7 +58,7 @@ export const projectInputSchema = z
   })
   .superRefine((value, ctx) => {
     if (value.startDate && value.completionDate && value.completionDate < value.startDate) {
-      ctx.addIssue({ code: "custom", path: ["completionDate"], error: "dateOrder" });
+      ctx.addIssue({ code: "custom", path: ["completionDate"], message: "dateOrder" });
     }
   });
 
