@@ -46,3 +46,9 @@ export function formatRelative(date: Date, locale: Locale, now: Date = new Date(
   if (abs < 86_400) return rtf.format(Math.round(seconds / 3600), "hour");
   return rtf.format(Math.round(seconds / 86_400), "day");
 }
+
+/** Date → value for <input type="datetime-local"> in Asia/Vientiane (UTC+7, no DST). */
+export function toVientianeInput(date: Date | null): string {
+  if (!date) return "";
+  return new Date(date.getTime() + 7 * 3600_000).toISOString().slice(0, 16);
+}
