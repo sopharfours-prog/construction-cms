@@ -624,6 +624,182 @@ const milestones: { year: number; t: T<string> }[] = [
   },
 ];
 
+// ─── Customer requests (for the dashboard and, later, the inbox screens) ────
+
+const daysAgo = (days: number, hour = 10) => {
+  const date = new Date(Date.now() - days * DAY);
+  date.setUTCHours(hour - 7, 15, 0, 0); // hour in Asia/Vientiane
+  return date;
+};
+
+const sampleInquiries: {
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  subject: string;
+  message: string;
+  status: "NEW" | "IN_PROGRESS" | "REPLIED" | "CLOSED";
+  locale: "lo" | "en";
+  days: number;
+}[] = [
+  {
+    name: "ສີສະຫວາດ ພົມມະວົງ",
+    email: "sisavath@example.com",
+    phone: "+856 20 5555 0101",
+    subject: "ສອບຖາມການກໍ່ສ້າງເຮືອນ 2 ຊັ້ນ",
+    message: "ຂ້ອຍຢາກສອບຖາມລາຄາ ແລະ ໄລຍະເວລາກໍ່ສ້າງເຮືອນ 2 ຊັ້ນ ຢູ່ເມືອງໄຊທານີ.",
+    status: "NEW",
+    locale: "lo",
+    days: 1,
+  },
+  {
+    name: "Daniel Novak",
+    email: "daniel.novak@example.com",
+    company: "Mekong Trade Partners",
+    subject: "Warehouse extension in Savannakhet",
+    message:
+      "We are planning a 3,000 m² extension to our warehouse and would like to discuss your availability next quarter.",
+    status: "NEW",
+    locale: "en",
+    days: 3,
+  },
+  {
+    name: "ບຸນມີ ແສງອາລຸນ",
+    email: "bounmy@example.com",
+    subject: "ສະໝັກວຽກວິສະວະກອນໂຍທາ",
+    message: "ຂ້ອຍຢາກສອບຖາມວ່າບໍລິສັດ ກຳລັງຮັບສະໝັກວິສະວະກອນໂຍທາ ຫຼື ບໍ່.",
+    status: "IN_PROGRESS",
+    locale: "lo",
+    days: 12,
+  },
+  {
+    name: "Aiko Tanaka",
+    email: "aiko.tanaka@example.com",
+    company: "Tanaka Architects",
+    subject: "Collaboration on a school project",
+    message:
+      "Our studio is designing a school in Luang Prabang and is looking for a local contractor.",
+    status: "REPLIED",
+    locale: "en",
+    days: 40,
+  },
+  {
+    name: "ວັນນະສອນ ໄຊຍະວົງ",
+    email: "vannasone@example.com",
+    subject: "ສອບຖາມການປັບປຸງຮ້ານອາຫານ",
+    message: "ຮ້ານອາຫານຂອງຂ້ອຍຕ້ອງການປັບປຸງພາຍໃນ ປະມານ 120 ຕາແມັດ.",
+    status: "CLOSED",
+    locale: "lo",
+    days: 75,
+  },
+  {
+    name: "Mark Ellison",
+    email: "mark.ellison@example.com",
+    subject: "Site safety certificate",
+    message: "Could you share a copy of your current safety certification for our tender file?",
+    status: "REPLIED",
+    locale: "en",
+    days: 130,
+  },
+];
+
+const sampleQuotes: {
+  customerName: string;
+  company?: string;
+  email: string;
+  phone: string;
+  service: string;
+  projectType: string;
+  location: string;
+  budget?: string;
+  status: "NEW" | "REVIEWING" | "CONTACTED" | "QUOTED" | "APPROVED" | "REJECTED";
+  locale: "lo" | "en";
+  days: number;
+  description: string;
+}[] = [
+  {
+    customerName: "ສົມສັກ ວົງພະຈັນ",
+    company: "ບໍລິສັດ ດາວເຮືອງ ການຄ້າ",
+    email: "somsak@example.com",
+    phone: "+856 20 5555 0201",
+    service: "building-construction",
+    projectType: "ອາຄານສຳນັກງານ 5 ຊັ້ນ",
+    location: "ນະຄອນຫຼວງວຽງຈັນ",
+    budget: "12000000000",
+    status: "NEW",
+    locale: "lo",
+    days: 0,
+    description: "ຕ້ອງການກໍ່ສ້າງອາຄານສຳນັກງານ 5 ຊັ້ນ ເນື້ອທີ່ດິນ 800 ຕາແມັດ.",
+  },
+  {
+    customerName: "Priya Raman",
+    company: "Green Valley Resorts",
+    email: "priya.raman@example.com",
+    phone: "+66 81 555 0102",
+    service: "renovation",
+    projectType: "Resort renovation",
+    location: "Vang Vieng",
+    budget: "4500000000",
+    status: "REVIEWING",
+    locale: "en",
+    days: 6,
+    description: "Renovation of 24 bungalows and the main restaurant before high season.",
+  },
+  {
+    customerName: "ແສງຈັນ ອິນທະວົງ",
+    email: "sengchan@example.com",
+    phone: "+856 20 5555 0203",
+    service: "interior-construction",
+    projectType: "ຕົກແຕ່ງພາຍໃນຮ້ານກາເຟ",
+    location: "ຫຼວງພະບາງ",
+    status: "CONTACTED",
+    locale: "lo",
+    days: 25,
+    description: "ຕົກແຕ່ງພາຍໃນຮ້ານກາເຟ ເນື້ອທີ່ 90 ຕາແມັດ.",
+  },
+  {
+    customerName: "Lucas Martin",
+    company: "Martin Logistics",
+    email: "lucas.martin@example.com",
+    phone: "+856 20 5555 0204",
+    service: "building-construction",
+    projectType: "Cold-storage warehouse",
+    location: "Savannakhet",
+    budget: "9800000000",
+    status: "QUOTED",
+    locale: "en",
+    days: 55,
+    description: "Cold-storage warehouse of about 4,000 m² with loading docks.",
+  },
+  {
+    customerName: "ພອນສະຫວັນ ແກ້ວວົງ",
+    company: "ບໍລິສັດ ພອນສະຫວັນ ພັດທະນາ",
+    email: "phonsavanh@example.com",
+    phone: "+856 20 5555 0205",
+    service: "infrastructure",
+    projectType: "ຖະໜົນເຂົ້າໂຄງການຈັດສັນ",
+    location: "ແຂວງຈຳປາສັກ",
+    budget: "3200000000",
+    status: "APPROVED",
+    locale: "lo",
+    days: 95,
+    description: "ກໍ່ສ້າງຖະໜົນຄອນກຣີດ ຍາວ 1.2 ກິໂລແມັດ ພ້ອມລະບົບລະບາຍນ້ຳ.",
+  },
+  {
+    customerName: "Helen Park",
+    email: "helen.park@example.com",
+    phone: "+82 10 5555 0106",
+    service: "project-management",
+    projectType: "Owner's representative",
+    location: "Vientiane Capital",
+    status: "REJECTED",
+    locale: "en",
+    days: 150,
+    description: "Project management for a 12-storey residential tower.",
+  },
+];
+
 // ─── Seeding ─────────────────────────────────────────────────────────────────
 
 const locales = ["lo", "en"] as const;
@@ -825,4 +1001,54 @@ export async function seedSampleData(db: PrismaClient, authorId: string) {
     }
   }
   console.log("  ✓ about page: team, certifications, milestones");
+
+  // Customer requests: seeded only when both inboxes are empty.
+  if ((await db.inquiry.count()) === 0 && (await db.quoteRequest.count()) === 0) {
+    for (const i of sampleInquiries) {
+      await db.inquiry.create({
+        data: {
+          name: i.name,
+          email: i.email,
+          phone: i.phone,
+          company: i.company,
+          subject: i.subject,
+          message: i.message,
+          status: i.status,
+          locale: i.locale,
+          createdAt: daysAgo(i.days),
+          repliedAt:
+            i.status === "REPLIED" || i.status === "CLOSED"
+              ? daysAgo(Math.max(0, i.days - 1))
+              : null,
+        },
+      });
+    }
+    const ordered = [...sampleQuotes].sort((a, b) => b.days - a.days);
+    for (const [index, q] of ordered.entries()) {
+      const createdAt = daysAgo(q.days);
+      await db.quoteRequest.create({
+        data: {
+          referenceNumber: `Q-${createdAt.getUTCFullYear()}-${String(index + 1).padStart(6, "0")}`,
+          customerName: q.customerName,
+          company: q.company,
+          email: q.email,
+          phone: q.phone,
+          serviceId: serviceIds.get(q.service),
+          projectType: q.projectType,
+          location: q.location,
+          estimatedBudget: q.budget,
+          currency: "LAK",
+          description: q.description,
+          status: q.status,
+          locale: q.locale,
+          createdAt,
+        },
+      });
+    }
+    console.log(
+      `  ✓ customer requests: ${sampleInquiries.length} inquiries, ${sampleQuotes.length} quote requests`,
+    );
+  } else {
+    console.log("  • customer requests kept (inboxes not empty)");
+  }
 }
