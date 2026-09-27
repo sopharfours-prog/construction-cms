@@ -4,7 +4,7 @@ Corporate website and content management system for a construction company.
 Public site in Lao and English, with a role-based admin CMS for projects,
 services, news, media, inquiries and quote requests.
 
-> **Status: Phase 2 of 14 (database).** Authentication, the CMS and public pages
+> **Status: Phase 3 of 14 (authentication).** The CMS screens and public pages
 > are built in later phases. See [Roadmap](#roadmap).
 
 ## Stack
@@ -46,18 +46,20 @@ In development, the design system reference is at
 
 ## Scripts
 
-| Command                | What it does                                        |
-| ---------------------- | --------------------------------------------------- |
-| `npm run dev`          | Development server                                  |
-| `npm run build`        | Production build                                    |
-| `npm run start`        | Serve the production build                          |
-| `npm run typecheck`    | Generate route types, then run `tsc --noEmit`       |
-| `npm run lint`         | ESLint, failing on any warning                      |
-| `npm run lint:fix`     | ESLint with autofix                                 |
-| `npm run format`       | Format everything with Prettier                     |
-| `npm run format:check` | Verify formatting without writing                   |
-| `npm run check`        | typecheck + lint + format:check (run before commit) |
-| `npm run db:*`         | Database scripts, see [DATABASE.md](DATABASE.md)    |
+| Command                    | What it does                                        |
+| -------------------------- | --------------------------------------------------- |
+| `npm run dev`              | Development server                                  |
+| `npm run build`            | Production build                                    |
+| `npm run start`            | Serve the production build                          |
+| `npm run typecheck`        | Generate route types, then run `tsc --noEmit`       |
+| `npm run lint`             | ESLint, failing on any warning                      |
+| `npm run lint:fix`         | ESLint with autofix                                 |
+| `npm run format`           | Format everything with Prettier                     |
+| `npm run format:check`     | Verify formatting without writing                   |
+| `npm run check`            | typecheck + lint + format:check (run before commit) |
+| `npm run db:*`             | Database scripts, see [DATABASE.md](DATABASE.md)    |
+| `npm test`                 | Unit tests (Vitest)                                 |
+| `npm run test:integration` | Integration tests against PostgreSQL                |
 
 ## Environment variables
 
@@ -98,6 +100,41 @@ Prisma lives at the repository root in `prisma/` (the location Prisma's
 tooling expects) rather than under `src/`. The generated client is written to
 `src/generated/prisma` (git-ignored).
 
+## Authentication
+
+The CMS lives at `/admin` (sign-in page: `/admin/login`). Accounts are created
+by administrators; there is no public sign-up.
+
+- **Passwords:** Argon2id, 12–128 characters. Reset links are single-use,
+  expire after 30 minutes, are stored only as SHA-256 hashes, and revoke every
+  existing session when used. Without SMTP configured, development prints the
+  email (with the link) to the server console.
+- **Sessions:** JWT in an HttpOnly cookie. 12 hours, or 30 days with
+  "Keep me signed in". The token carries no permissions: every request
+  re-checks the account (active, not deleted, session version) and loads the
+  role's permissions from the database, so disabling a user or changing a role
+  takes effect on the next click.
+- **Brute force:** 5 failed attempts per email lock sign-in for 15 minutes
+  (same response whether or not the account exists); 20 attempts per IP per
+  15 minutes. Counters live in PostgreSQL, so limits hold across serverless
+  instances and containers.
+- **Authorization helpers** (`src/lib/auth/session.ts`): `requireUser()` and
+  `requirePermission("projects.update")` for pages, `authorize()` for server
+  actions, `authorizeRequest()` for route handlers (401/403 JSON).
+- **Audit:** sign-ins, failures (with reason), sign-outs and password resets
+  are recorded in `audit_logs`.
+
+Required in production: `AUTH_SECRET` (32+ characters) and `AUTH_URL` (the
+public URL). Use `AUTH_URL`, not `NEXTAUTH_URL`: without it Auth.js rejects the
+host and every sign-in fails.
+
+## Testing
+
+```bash
+npm test                   # unit tests
+npm run test:integration   # against the database in DATABASE_URL (use a disposable one)
+```
+
 ## Design system
 
 - **Colour** is defined in three layers in `globals.css`: brand variables →
@@ -125,7 +162,7 @@ used in this project.
 
 1. ✅ Project initialization
 2. ✅ Database (Prisma, schema, migrations, seed)
-3. Authentication and RBAC
+3. ✅ Authentication and RBAC
 4. Admin layout and dashboard
 5. CMS core (projects, services, news, pages, categories, tags)
 6. Media library and object storage

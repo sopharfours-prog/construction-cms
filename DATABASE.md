@@ -95,7 +95,9 @@ Customer attachments are **not** media-library files: they are private, stored
 under a non-public prefix and only downloadable through a permission-checked
 route.
 
-**System:** `settings` (key → JSON), `audit_logs`, `languages`.
+**System:** `settings` (key → JSON), `audit_logs`, `languages`,
+`rate_limits` (fixed-window counters keyed by SHA-256 digests, never raw
+emails or IPs; expired rows are cleaned up opportunistically).
 
 ### Publication status
 
