@@ -4,8 +4,8 @@ Corporate website and content management system for a construction company.
 Public site in Lao and English, with a role-based admin CMS for projects,
 services, news, media, inquiries and quote requests.
 
-> **Status: Phase 1 of 14 (project foundation).** The database, authentication,
-> CMS and public pages are built in later phases. See [Roadmap](#roadmap).
+> **Status: Phase 2 of 14 (database).** Authentication, the CMS and public pages
+> are built in later phases. See [Roadmap](#roadmap).
 
 ## Stack
 
@@ -14,7 +14,7 @@ services, news, media, inquiries and quote requests.
 | Framework  | Next.js 16 (App Router, Turbopack), React 19, TypeScript strict |
 | Styling    | Tailwind CSS v4, shadcn/ui (Radix), Lucide icons                |
 | Validation | Zod                                                             |
-| Database   | PostgreSQL + Prisma (Phase 2)                                   |
+| Database   | PostgreSQL + Prisma 7 (driver adapter `pg`)                     |
 | Auth       | Auth.js with RBAC (Phase 3)                                     |
 | Storage    | S3-compatible adapter: AWS S3, Cloudflare R2, MinIO (Phase 6)   |
 
@@ -22,14 +22,24 @@ services, news, media, inquiries and quote requests.
 
 - Node.js 20.9 or newer (22 LTS recommended, see `.nvmrc`)
 - npm 10+
+- PostgreSQL 15+ (or Docker, using the included `docker-compose.yml`)
 
 ## Getting started
 
 ```bash
-npm install
-cp .env.example .env.local   # then fill in values
+npm install                  # also generates the Prisma client
+cp .env.example .env         # set DATABASE_URL and SEED_ADMIN_PASSWORD
+docker compose up -d         # local PostgreSQL (skip if you have your own)
+npm run db:deploy            # apply migrations
+npm run db:seed              # roles, admin account, sample content
 npm run dev                  # http://localhost:3000
 ```
+
+Check the app can reach the database at
+[http://localhost:3000/api/health](http://localhost:3000/api/health).
+
+Database details, conventions and the migration workflow are in
+[DATABASE.md](DATABASE.md).
 
 In development, the design system reference is at
 [http://localhost:3000/styleguide](http://localhost:3000/styleguide). It returns 404 in production.
@@ -47,6 +57,7 @@ In development, the design system reference is at
 | `npm run format`       | Format everything with Prettier                     |
 | `npm run format:check` | Verify formatting without writing                   |
 | `npm run check`        | typecheck + lint + format:check (run before commit) |
+| `npm run db:*`         | Database scripts, see [DATABASE.md](DATABASE.md)    |
 
 ## Environment variables
 
@@ -83,8 +94,9 @@ src/
 └── types/
 ```
 
-Prisma will live at the repository root in `prisma/` (the location Prisma's
-tooling expects) rather than under `src/`.
+Prisma lives at the repository root in `prisma/` (the location Prisma's
+tooling expects) rather than under `src/`. The generated client is written to
+`src/generated/prisma` (git-ignored).
 
 ## Design system
 
@@ -112,7 +124,7 @@ used in this project.
 ## Roadmap
 
 1. ✅ Project initialization
-2. Database (Prisma, schema, migrations, seed)
+2. ✅ Database (Prisma, schema, migrations, seed)
 3. Authentication and RBAC
 4. Admin layout and dashboard
 5. CMS core (projects, services, news, pages, categories, tags)
