@@ -40,12 +40,12 @@ export const optionalDate = z
   .transform((v, ctx) => {
     if (!v) return null;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-      ctx.addIssue({ code: "custom", error: "dateInvalid" });
+      ctx.addIssue({ code: "custom", message: "dateInvalid" });
       return z.NEVER;
     }
     const date = new Date(`${v}T00:00:00Z`);
     if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== v) {
-      ctx.addIssue({ code: "custom", error: "dateInvalid" });
+      ctx.addIssue({ code: "custom", message: "dateInvalid" });
       return z.NEVER;
     }
     return date;
@@ -58,12 +58,16 @@ export const optionalLocalDateTime = z
   .transform((v, ctx) => {
     if (!v) return null;
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) {
-      ctx.addIssue({ code: "custom", error: "dateInvalid" });
+      ctx.addIssue({ code: "custom", message: "dateInvalid" });
       return z.NEVER;
     }
     const date = new Date(`${v}:00+07:00`);
-    if (Number.isNaN(date.getTime())) {
-      ctx.addIssue({ code: "custom", error: "dateInvalid" });
+    // Reject values JavaScript would silently roll over (2026-02-30 → March 2).
+    const roundTrip = Number.isNaN(date.getTime())
+      ? ""
+      : new Date(date.getTime() + 7 * 3600_000).toISOString().slice(0, 16);
+    if (roundTrip !== v) {
+      ctx.addIssue({ code: "custom", message: "dateInvalid" });
       return z.NEVER;
     }
     return date;
@@ -78,7 +82,7 @@ export const optionalAmount = z
     if (!v) return null;
     const normalized = v.replace(/[\s,]/g, "");
     if (!/^\d{1,16}(\.\d{1,2})?$/.test(normalized)) {
-      ctx.addIssue({ code: "custom", error: "amountInvalid" });
+      ctx.addIssue({ code: "custom", message: "amountInvalid" });
       return z.NEVER;
     }
     return normalized;
@@ -127,7 +131,7 @@ export function translationsSchema<S extends Shape>(shape: S, requiredKey: keyof
               v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0),
           );
         if ((locale === defaultLocale || filled) && !t?.[requiredKey]) {
-          ctx.addIssue({ code: "custom", path: [locale, requiredKey], error: "required" });
+          ctx.addIssue({ code: "custom", path: [locale, requiredKey], message: "required" });
         }
       }
     })
