@@ -8,6 +8,7 @@ import {
   NewspaperIcon,
   ScrollTextIcon,
   SettingsIcon,
+  TagsIcon,
   UsersIcon,
   WrenchIcon,
   type LucideIcon,
@@ -27,6 +28,7 @@ const icons: Record<AdminNavIcon, LucideIcon> = {
   users: UsersIcon,
   "scroll-text": ScrollTextIcon,
   settings: SettingsIcon,
+  tags: TagsIcon,
 };
 
 export function NavIcon({ name, className }: { name: AdminNavIcon; className?: string }) {

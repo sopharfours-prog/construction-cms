@@ -18,7 +18,8 @@ export type AdminNavIcon =
   | "file-spreadsheet"
   | "users"
   | "scroll-text"
-  | "settings";
+  | "settings"
+  | "tags";
 
 export type AdminNavItemKey =
   | "dashboard"
@@ -27,6 +28,7 @@ export type AdminNavItemKey =
   | "news"
   | "media"
   | "pages"
+  | "taxonomy"
   | "inquiries"
   | "quotes"
   | "users"
@@ -65,28 +67,35 @@ export const adminNav: readonly { key: AdminNavGroupKey; items: readonly AdminNa
         href: "/admin/projects",
         icon: "hard-hat",
         permission: "projects.view",
-        ready: false,
+        ready: true,
       },
       {
         key: "services",
         href: "/admin/services",
         icon: "wrench",
         permission: "services.view",
-        ready: false,
+        ready: true,
       },
       {
         key: "news",
         href: "/admin/news",
         icon: "newspaper",
         permission: "news.view",
-        ready: false,
+        ready: true,
       },
       {
         key: "pages",
         href: "/admin/pages",
         icon: "file-text",
         permission: "pages.view",
-        ready: false,
+        ready: true,
+      },
+      {
+        key: "taxonomy",
+        href: "/admin/taxonomy",
+        icon: "tags",
+        permission: "taxonomy.manage",
+        ready: true,
       },
       {
         key: "media",

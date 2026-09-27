@@ -82,3 +82,18 @@ describe("admin dictionaries", () => {
     expect(shape(getAdminMessages("lo"))).toEqual(shape(getAdminMessages("en")));
   });
 });
+
+describe("navigation routes", async () => {
+  const { existsSync } = await import("node:fs");
+  const pageFile = (href: string) =>
+    `src/app/admin/(protected)${href.replace(/^\/admin/, "")}/page.tsx`;
+
+  it("every ready item has a page, and every page has its item marked ready", () => {
+    for (const item of adminNav.flatMap((g) => g.items)) {
+      expect(
+        existsSync(pageFile(item.href)),
+        `${item.key}: ready=${item.ready} but page exists=${!item.ready}`,
+      ).toBe(item.ready);
+    }
+  });
+});
