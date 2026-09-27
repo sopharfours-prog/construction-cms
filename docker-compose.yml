@@ -1,0 +1,27 @@
+# Local development services.
+#   docker compose up -d        start PostgreSQL
+#   docker compose down         stop (data is kept in the named volume)
+# Object storage (MinIO) is added in Phase 6; the production stack in Phase 14.
+name: construction-cms
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-construction_cms}
+    ports:
+      # Bound to localhost only: never expose the database on a public interface.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
