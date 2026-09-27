@@ -829,6 +829,19 @@ model Setting {
   @@map("settings")
 }
 
+/// Fixed-window rate-limit counters (login, password reset, public forms).
+/// Stored in PostgreSQL so limits hold across serverless instances and
+/// containers. Keys never contain raw emails or IPs, only SHA-256 digests.
+model RateLimit {
+  key             String   @id @db.VarChar(128)
+  count           Int      @default(0)
+  windowStartedAt DateTime @map("window_started_at")
+  expiresAt       DateTime @map("expires_at")
+
+  @@index([expiresAt])
+  @@map("rate_limits")
+}
+
 /// Append-only. Never updated or deleted by the application.
 model AuditLog {
   id        String      @id @default(uuid(7)) @db.Uuid
