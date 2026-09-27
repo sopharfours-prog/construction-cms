@@ -1,0 +1,854 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Construction CMS — database schema
+//
+// Conventions
+// • IDs are UUIDv7 (time-ordered, index-friendly) stored as native `uuid`.
+// • Tables/columns are snake_case in PostgreSQL, camelCase in TypeScript.
+// • Translatable text lives in *Translation tables keyed by (entity, locale).
+//   Locales are rows in `languages`, so adding a language needs no migration.
+// • `deletedAt` marks soft-deleted rows. Repositories filter them out; the
+//   slug of a soft-deleted row is rewritten so the slug can be reused.
+// • Large files are never stored here: only object-storage keys and metadata.
+// See DATABASE.md for the full rationale.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+/// Publication state shared by projects, services, news and pages.
+/// Projects/services/pages use DRAFT and PUBLISHED; news uses all four.
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+enum ProjectStatus {
+  COMPLETED
+  ONGOING
+  UPCOMING
+}
+
+enum CategoryType {
+  PROJECT
+  NEWS
+}
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  OTHER
+}
+
+enum InquiryStatus {
+  NEW
+  IN_PROGRESS
+  REPLIED
+  CLOSED
+}
+
+enum QuoteStatus {
+  NEW
+  REVIEWING
+  CONTACTED
+  QUOTED
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
+enum AuditAction {
+  LOGIN
+  LOGIN_FAILED
+  LOGOUT
+  PASSWORD_RESET
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+  PUBLISH
+  UNPUBLISH
+  UPLOAD
+  PERMISSION_CHANGE
+  STATUS_CHANGE
+  SETTINGS_CHANGE
+}
+
+// ─── Localization ────────────────────────────────────────────────────────────
+
+model Language {
+  code       String   @id @db.VarChar(10) /// BCP-47 code, e.g. "lo", "en"
+  name       String   @db.VarChar(64)
+  nativeName String   @map("native_name") @db.VarChar(64)
+  enabled    Boolean  @default(true)
+  isDefault  Boolean  @default(false) @map("is_default")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  projectTranslations       ProjectTranslation[]
+  projectImageTranslations  ProjectImageTranslation[]
+  serviceTranslations       ServiceTranslation[]
+  newsTranslations          NewsTranslation[]
+  pageTranslations          PageTranslation[]
+  categoryTranslations      CategoryTranslation[]
+  tagTranslations           TagTranslation[]
+  teamMemberTranslations    TeamMemberTranslation[]
+  certificationTranslations CertificationTranslation[]
+  milestoneTranslations     MilestoneTranslation[]
+
+  @@map("languages")
+}
+
+// ─── Identity & access ───────────────────────────────────────────────────────
+
+model User {
+  id                  String     @id @default(uuid(7)) @db.Uuid
+  name                String     @db.VarChar(120)
+  /// Stored lower-cased; uniqueness is therefore case-insensitive.
+  email               String     @unique @db.VarChar(254)
+  /// Argon2id hash. Null means the account must set a password via reset link.
+  passwordHash        String?    @map("password_hash")
+  status              UserStatus @default(ACTIVE)
+  roleId              String     @map("role_id") @db.Uuid
+  avatarId            String?    @map("avatar_id") @db.Uuid
+  lastLoginAt         DateTime?  @map("last_login_at")
+  failedLoginAttempts Int        @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime?  @map("locked_until")
+  /// Incremented to invalidate every existing session (password change, disable, role change).
+  sessionVersion      Int        @default(1) @map("session_version")
+  preferredLocale     String?    @map("preferred_locale") @db.VarChar(10)
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+  deletedAt           DateTime?  @map("deleted_at")
+
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  avatar Media? @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
+
+  passwordResetTokens PasswordResetToken[]
+  uploadedMedia       Media[]              @relation("MediaUploader")
+  authoredNews        News[]               @relation("NewsAuthor")
+  createdProjects     Project[]            @relation("ProjectCreator")
+  updatedProjects     Project[]            @relation("ProjectUpdater")
+  assignedInquiries   Inquiry[]            @relation("InquiryAssignee")
+  assignedQuotes      QuoteRequest[]       @relation("QuoteAssignee")
+  inquiryNotes        InquiryNote[]
+  quoteNotes          QuoteNote[]
+  settingsUpdated     Setting[]
+  auditLogs           AuditLog[]
+
+  @@index([roleId])
+  @@index([status, deletedAt])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  /// Stable machine key, e.g. "SUPER_ADMIN". Never shown to users.
+  key         String   @unique @db.VarChar(64)
+  name        String   @db.VarChar(120)
+  description String?  @db.VarChar(500)
+  /// System roles are seeded and cannot be deleted from the UI.
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  /// e.g. "projects.update". The code registry in src/lib/permissions defines valid keys.
+  key         String   @unique @db.VarChar(100)
+  group       String   @db.VarChar(50)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  roles RolePermission[]
+
+  @@index([group])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  /// SHA-256 of the token sent by email. The raw token is never stored.
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+// ─── Media ───────────────────────────────────────────────────────────────────
+
+model MediaFolder {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String   @db.VarChar(120)
+  parentId  String?  @map("parent_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent   MediaFolder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children MediaFolder[] @relation("FolderTree")
+  media    Media[]
+
+  @@unique([parentId, name])
+  @@map("media_folders")
+}
+
+/// Public media-library files (images, videos, brochures). Files live in object
+/// storage; this row holds metadata and the storage key only.
+model Media {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  kind         MediaKind
+  /// Server-generated file name (never the user's original name).
+  filename     String    @db.VarChar(255)
+  originalName String    @map("original_name") @db.VarChar(255)
+  mimeType     String    @map("mime_type") @db.VarChar(127)
+  /// Bytes. Upload limits keep files well under Int max (2 GiB).
+  size         Int
+  width        Int?
+  height       Int?
+  /// Object key in the bucket, e.g. "media/2026/09/0192f...-a1b2.webp".
+  storageKey   String    @unique @map("storage_key") @db.VarChar(512)
+  url          String    @db.VarChar(1024)
+  /// Default alt text/caption. Contexts that need per-language text (gallery)
+  /// have their own translation table.
+  altText      String?   @map("alt_text") @db.VarChar(255)
+  caption      String?   @db.VarChar(500)
+  /// Tiny base64 blur placeholder for images.
+  blurDataUrl  String?   @map("blur_data_url") @db.Text
+  folderId     String?   @map("folder_id") @db.Uuid
+  uploadedById String?   @map("uploaded_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  folder     MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  uploadedBy User?        @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  userAvatars         User[]          @relation("UserAvatar")
+  projectCovers       Project[]       @relation("ProjectCover")
+  projectImages       ProjectImage[]
+  serviceCovers       Service[]       @relation("ServiceCover")
+  newsCovers          News[]          @relation("NewsCover")
+  newsSeoImages       News[]          @relation("NewsSeoImage")
+  pageCovers          Page[]          @relation("PageCover")
+  teamMemberPhotos    TeamMember[]
+  certificationImages Certification[]
+
+  @@index([kind, deletedAt])
+  @@index([folderId])
+  @@index([createdAt])
+  @@map("media")
+}
+
+// ─── Taxonomy ────────────────────────────────────────────────────────────────
+
+model Category {
+  id        String       @id @default(uuid(7)) @db.Uuid
+  type      CategoryType
+  slug      String       @db.VarChar(160)
+  sortOrder Int          @default(0) @map("sort_order")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  translations CategoryTranslation[]
+  projects     Project[]
+  news         News[]
+
+  @@unique([type, slug])
+  @@map("categories")
+}
+
+model CategoryTranslation {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  categoryId  String  @map("category_id") @db.Uuid
+  locale      String  @db.VarChar(10)
+  name        String  @db.VarChar(160)
+  description String? @db.VarChar(500)
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [locale], references: [code], onDelete: Restrict)
+
+  @@unique([categoryId, locale])
+  @@index([locale])
+  @@map("category_translations")
+}
+
+model Tag {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  slug      String   @unique @db.VarChar(160)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  translations TagTranslation[]
+  news         NewsTag[]
+
+  @@map("tags")
+}
+
+model TagTranslation {
+  id     String @id @default(uuid(7)) @db.Uuid
+  tagId  String @map("tag_id") @db.Uuid
+  locale String @db.VarChar(10)
+  name   String @db.VarChar(160)
+
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [locale], references: [code], onDelete: Restrict)
+
+  @@unique([tagId, locale])
+  @@index([locale])
+  @@map("tag_translations")
+}
+
+// ─── Projects ────────────────────────────────────────────────────────────────
+
+model Project {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  slug           String        @unique @db.VarChar(200)
+  categoryId     String?       @map("category_id") @db.Uuid
+  projectStatus  ProjectStatus @default(UPCOMING) @map("project_status")
+  status         ContentStatus @default(DRAFT)
+  featured       Boolean       @default(false)
+  startDate      DateTime?     @map("start_date") @db.Date
+  completionDate DateTime?     @map("completion_date") @db.Date
+  /// Contract value. Shown publicly only when `showBudget` is true.
+  budget         Decimal?      @db.Decimal(18, 2)
+  currency       String        @default("LAK") @db.Char(3)
+  showBudget     Boolean       @default(false) @map("show_budget")
+  coverImageId   String?       @map("cover_image_id") @db.Uuid
+  sortOrder      Int           @default(0) @map("sort_order")
+  publishedAt    DateTime?     @map("published_at")
+  createdById    String?       @map("created_by_id") @db.Uuid
+  updatedById    String?       @map("updated_by_id") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  coverImage Media?    @relation("ProjectCover", fields: [coverImageId], references: [id], onDelete: SetNull)
+  createdBy  User?     @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy  User?     @relation("ProjectUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  translations ProjectTranslation[]
+  images       ProjectImage[]
+  services     ProjectService[]
+
+  @@index([status, deletedAt, featured])
+  @@index([categoryId])
+  @@index([projectStatus])
+  @@index([completionDate])
+  @@index([publishedAt])
+  @@map("projects")
+}
+
+model ProjectTranslation {
+  id               String  @id @default(uuid(7)) @db.Uuid
+  projectId        String  @map("project_id") @db.Uuid
+  locale           String  @db.VarChar(10)
+  title            String  @db.VarChar(200)
+  shortDescription String? @map("short_description") @db.VarChar(500)
+  /// Rich text document (editor JSON, rendered server-side; never raw HTML).
+  description      Json?
+  location         String? @db.VarChar(200)
+  client           String? @db.VarChar(200)
+  architect        String? @db.VarChar(200)
+  contractor       String? @db.VarChar(200)
+  projectManager   String? @map("project_manager") @db.VarChar(200)
+  /// Ordered key/value pairs, e.g. [{ "label": "Floors", "value": "24" }].
+  specifications   Json?
+  seoTitle         String? @map("seo_title") @db.VarChar(70)
+  seoDescription   String? @map("seo_description") @db.VarChar(170)
+
+  project  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [locale], references: [code], onDelete: Restrict)
+
+  @@unique([projectId, locale])
+  @@index([locale, title])
+  @@map("project_translations")
+}
+
+model ProjectImage {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  mediaId   String   @map("media_id") @db.Uuid
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project      Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  media        Media                     @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  translations ProjectImageTranslation[]
+
+  @@unique([projectId, mediaId])
+  @@index([projectId, sortOrder])
+  @@index([mediaId])
+  @@map("project_images")
+}
+
+model ProjectImageTranslation {
+  id             String  @id @default(uuid(7)) @db.Uuid
+  projectImageId String  @map("project_image_id") @db.Uuid
+  locale         String  @db.VarChar(10)
+  altText        String? @map("alt_text") @db.VarChar(255)
+  caption        String? @db.VarChar(500)
+
+  projectImage ProjectImage @relation(fields: [projectImageId], references: [id], onDelete: Cascade)
+  language     Language     @relation(fields: [locale], references: [code], onDelete: Restrict)
+
+  @@unique([projectImageId, locale])
+  @@map("project_image_translations")
+}
+
+/// Links projects to the services involved (drives "Related projects" on service pages).
+model ProjectService {
+  projectId String @map("project_id") @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, serviceId])
+  @@index([serviceId])
+  @@map("project_services")
+}
+
+// ─── Services ────────────────────────────────────────────────────────────────
+
+model Service {
+  id           String        @id @default(uuid(7)) @db.Uuid
+  slug         String        @unique @db.VarChar(200)
+  /// Lucide icon name, e.g. "building-2". Validated against an allow-list.
+  icon         String?       @db.VarChar(64)
+  coverImageId String?       @map("cover_image_id") @db.Uuid
+  sortOrder    Int           @default(0) @map("sort_order")
+  status       ContentStatus @default(DRAFT)
+  publishedAt  DateTime?     @map("published_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  deletedAt    DateTime?     @map("deleted_at")
+
+  coverImage   Media?               @relation("ServiceCover", fields: [coverImageId], references: [id], onDelete: SetNull)
+  translations ServiceTranslation[]
+  projects     ProjectService[]
+  quotes       QuoteRequest[]
+
+  @@index([status, deletedAt, sortOrder])
+  @@map("services")
+}
+
+model ServiceTranslation {
+  id             String  @id @default(uuid(7)) @db.Uuid
+  serviceId      String  @map("service_id") @db.Uuid
+  locale         String  @db.VarChar(10)
+  title          String  @db.VarChar(200)
+  description    String? @db.VarChar(500)
+  /// Rich text document (editor JSON).
+  content        Json?
+  /// Ordered process steps: [{ "title": "...", "description": "..." }].
+  process        Json?
+  seoTitle       String? @map("seo_title") @db.VarChar(70)
+  seoDescription String? @map("seo_description") @db.VarChar(170)
+
+  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [locale], references: [code], onDelete: Restrict)
+
+  @@unique([serviceId, locale])
+  @@index([locale])
+  @@map("service_translations")
+}
+
+// ─── News ────────────────────────────────────────────────────────────────────
+
+model News {
+  id           String        @id @default(uuid(7)) @db.Uuid
+  slug         String        @unique @db.VarChar(200)
+  categoryId   String?       @map("category_id") @db.Uuid
+  authorId     String?       @map("author_id") @db.Uuid
+  coverImageId String?       @map("cover_image_id") @db.Uuid
+  seoImageId   String?       @map("seo_image_id") @db.Uuid
+  status       ContentStatus @default(DRAFT)
+  /// Publication time. For SCHEDULED items this is in the future.
+  publishedAt  DateTime?     @map("published_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  deletedAt    DateTime?     @map("deleted_at")
+
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  author     User?     @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  coverImage Media?    @relation("NewsCover", fields: [coverImageId], references: [id], onDelete: SetNull)
+  seoImage   Media?    @relation("NewsSeoImage", fields: [seoImageId], references: [id], onDelete: SetNull)
+
+  translations NewsTranslation[]
+  tags         NewsTag[]
+
+  @@index([status, deletedAt, publishedAt(sort: Desc)])
+  @@index([categoryId])
+  @@index([authorId])
+  @@map("news")
+}
+
+model NewsTranslation {
+  id             String  @id @default(uuid(7)) @db.Uuid
+  newsId         String  @map("news_id") @db.Uuid
+  locale         String  @db.VarChar(10)
+  title          String  @db.VarChar(200)
+  excerpt        String? @db.VarChar(500)
+  /// Rich text document (editor JSON).
+  content        Json?
+  seoTitle       String? @map("seo_title") @db.VarChar(70)
+  seoDescription String? @map("seo_description") @db.VarChar(170)
+
+  news     News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [locale], references: [code], onDelete: Restrict)
+
+  @@unique([newsId, locale])
+  @@index([locale, title])
+  @@map("news_translations")
+}
+
+model NewsTag {
+  newsId String @map("news_id") @db.Uuid
+  tagId  String @map("tag_id") @db.Uuid
+
+  news News @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([newsId, tagId])
+  @@index([tagId])
+  @@map("news_tags")
+}
+
+// ─── Pages (About, Privacy Policy, Terms …) ───────────────────────────────────
+
+model Page {
+  id           String        @id @default(uuid(7)) @db.Uuid
+  slug         String        @unique @db.VarChar(200)
+  status       ContentStatus @default(DRAFT)
+  coverImageId String?       @map("cover_image_id") @db.Uuid
+  publishedAt  DateTime?     @map("published_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  deletedAt    DateTime?     @map("deleted_at")
+
+  coverImage   Media?            @relation("PageCover", fields: [coverImageId], references: [id], onDelete: SetNull)
+  translations PageTranslation[]
+
+  @@index([status, deletedAt])
+  @@map("pages")
+}
+
+model PageTranslation {
+  id             String  @id @default(uuid(7)) @db.Uuid
+  pageId         String  @map("page_id") @db.Uuid
+  locale         String  @db.VarChar(10)
+  title          String  @db.VarChar(200)
+  /// Rich text document (editor JSON).
+  content        Json?
+  seoTitle       String? @map("seo_title") @db.VarChar(70)
+  seoDescription String? @map("seo_description") @db.VarChar(170)
+
+  page     Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [locale], references: [code], onDelete: Restrict)
+
+  @@unique([pageId, locale])
+  @@map("page_translations")
+}
+
+// ─── About page: team, certifications, timeline ──────────────────────────────
+
+model TeamMember {
+  id        String        @id @default(uuid(7)) @db.Uuid
+  photoId   String?       @map("photo_id") @db.Uuid
+  sortOrder Int           @default(0) @map("sort_order")
+  status    ContentStatus @default(PUBLISHED)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  photo        Media?                  @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  translations TeamMemberTranslation[]
+
+  @@index([status, sortOrder])
+  @@map("team_members")
+}
+
+model TeamMemberTranslation {
+  id           String  @id @default(uuid(7)) @db.Uuid
+  teamMemberId String  @map("team_member_id") @db.Uuid
+  locale       String  @db.VarChar(10)
+  name         String  @db.VarChar(160)
+  position     String  @db.VarChar(160)
+  bio          String? @db.VarChar(1000)
+
+  teamMember TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  language   Language   @relation(fields: [locale], references: [code], onDelete: Restrict)
+
+  @@unique([teamMemberId, locale])
+  @@map("team_member_translations")
+}
+
+model Certification {
+  id        String        @id @default(uuid(7)) @db.Uuid
+  imageId   String?       @map("image_id") @db.Uuid
+  issuedAt  DateTime?     @map("issued_at") @db.Date
+  expiresAt DateTime?     @map("expires_at") @db.Date
+  sortOrder Int           @default(0) @map("sort_order")
+  status    ContentStatus @default(PUBLISHED)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  image        Media?                     @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  translations CertificationTranslation[]
+
+  @@index([status, sortOrder])
+  @@map("certifications")
+}
+
+model CertificationTranslation {
+  id              String  @id @default(uuid(7)) @db.Uuid
+  certificationId String  @map("certification_id") @db.Uuid
+  locale          String  @db.VarChar(10)
+  name            String  @db.VarChar(200)
+  issuer          String? @db.VarChar(200)
+  description     String? @db.VarChar(500)
+
+  certification Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+  language      Language      @relation(fields: [locale], references: [code], onDelete: Restrict)
+
+  @@unique([certificationId, locale])
+  @@map("certification_translations")
+}
+
+/// Company timeline entries on the About page.
+model Milestone {
+  id        String        @id @default(uuid(7)) @db.Uuid
+  year      Int
+  sortOrder Int           @default(0) @map("sort_order")
+  status    ContentStatus @default(PUBLISHED)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  translations MilestoneTranslation[]
+
+  @@index([status, year])
+  @@map("milestones")
+}
+
+model MilestoneTranslation {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  milestoneId String  @map("milestone_id") @db.Uuid
+  locale      String  @db.VarChar(10)
+  title       String  @db.VarChar(200)
+  description String? @db.VarChar(1000)
+
+  milestone Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  language  Language  @relation(fields: [locale], references: [code], onDelete: Restrict)
+
+  @@unique([milestoneId, locale])
+  @@map("milestone_translations")
+}
+
+// ─── Customer communication ──────────────────────────────────────────────────
+
+model Inquiry {
+  id           String        @id @default(uuid(7)) @db.Uuid
+  name         String        @db.VarChar(120)
+  email        String        @db.VarChar(254)
+  phone        String?       @db.VarChar(40)
+  company      String?       @db.VarChar(160)
+  subject      String        @db.VarChar(200)
+  message      String        @db.Text
+  status       InquiryStatus @default(NEW)
+  /// Language the visitor used, so staff can reply in kind.
+  locale       String?       @db.VarChar(10)
+  assignedToId String?       @map("assigned_to_id") @db.Uuid
+  ipAddress    String?       @map("ip_address") @db.VarChar(45)
+  userAgent    String?       @map("user_agent") @db.VarChar(512)
+  repliedAt    DateTime?     @map("replied_at")
+  archivedAt   DateTime?     @map("archived_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  assignedTo  User?               @relation("InquiryAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  attachments InquiryAttachment[]
+  notes       InquiryNote[]
+
+  @@index([status, archivedAt, createdAt(sort: Desc)])
+  @@index([assignedToId])
+  @@index([email])
+  @@map("inquiries")
+}
+
+/// Visitor-uploaded files are private: stored under a non-public prefix and
+/// served only through an authenticated, permission-checked route.
+model InquiryAttachment {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  inquiryId    String   @map("inquiry_id") @db.Uuid
+  originalName String   @map("original_name") @db.VarChar(255)
+  mimeType     String   @map("mime_type") @db.VarChar(127)
+  size         Int
+  storageKey   String   @unique @map("storage_key") @db.VarChar(512)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  @@index([inquiryId])
+  @@map("inquiry_attachments")
+}
+
+model InquiryNote {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  inquiryId String   @map("inquiry_id") @db.Uuid
+  authorId  String?  @map("author_id") @db.Uuid
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  author  User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([inquiryId, createdAt])
+  @@map("inquiry_notes")
+}
+
+model QuoteRequest {
+  id                String      @id @default(uuid(7)) @db.Uuid
+  /// Human-friendly reference given to the customer, e.g. "Q-2026-000042".
+  referenceNumber   String      @unique @map("reference_number") @db.VarChar(20)
+  customerName      String      @map("customer_name") @db.VarChar(120)
+  company           String?     @db.VarChar(160)
+  email             String      @db.VarChar(254)
+  phone             String      @db.VarChar(40)
+  /// Service the customer chose, if any. Free-text label keeps the customer's wording.
+  serviceId         String?     @map("service_id") @db.Uuid
+  projectType       String      @map("project_type") @db.VarChar(160)
+  location          String      @db.VarChar(200)
+  estimatedBudget   Decimal?    @map("estimated_budget") @db.Decimal(18, 2)
+  currency          String      @default("LAK") @db.Char(3)
+  expectedStartDate DateTime?   @map("expected_start_date") @db.Date
+  description       String      @db.Text
+  status            QuoteStatus @default(NEW)
+  locale            String?     @db.VarChar(10)
+  assignedToId      String?     @map("assigned_to_id") @db.Uuid
+  ipAddress         String?     @map("ip_address") @db.VarChar(45)
+  userAgent         String?     @map("user_agent") @db.VarChar(512)
+  archivedAt        DateTime?   @map("archived_at")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  service     Service?          @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  assignedTo  User?             @relation("QuoteAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  attachments QuoteAttachment[]
+  notes       QuoteNote[]
+
+  @@index([status, archivedAt, createdAt(sort: Desc)])
+  @@index([assignedToId])
+  @@index([email])
+  @@map("quote_requests")
+}
+
+model QuoteAttachment {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  quoteRequestId String   @map("quote_request_id") @db.Uuid
+  originalName   String   @map("original_name") @db.VarChar(255)
+  mimeType       String   @map("mime_type") @db.VarChar(127)
+  size           Int
+  storageKey     String   @unique @map("storage_key") @db.VarChar(512)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  quoteRequest QuoteRequest @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+
+  @@index([quoteRequestId])
+  @@map("quote_attachments")
+}
+
+model QuoteNote {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  quoteRequestId String   @map("quote_request_id") @db.Uuid
+  authorId       String?  @map("author_id") @db.Uuid
+  body           String   @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  quoteRequest QuoteRequest @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+  author       User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([quoteRequestId, createdAt])
+  @@map("quote_notes")
+}
+
+// ─── Settings & audit ────────────────────────────────────────────────────────
+
+/// Website settings grouped by key ("general", "contact", "social", "seo",
+/// "appearance", "language"). Each value is validated by a Zod schema in code.
+/// Translatable values are stored as { "lo": "...", "en": "..." } objects.
+model Setting {
+  key         String   @id @db.VarChar(64)
+  value       Json
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("settings")
+}
+
+/// Append-only. Never updated or deleted by the application.
+model AuditLog {
+  id        String      @id @default(uuid(7)) @db.Uuid
+  userId    String?     @map("user_id") @db.Uuid
+  action    AuditAction
+  /// Entity type, e.g. "Project", "User", "Setting".
+  entity    String      @db.VarChar(64)
+  entityId  String?     @map("entity_id") @db.VarChar(64)
+  /// Snapshots with secrets (password hashes, tokens) removed before writing.
+  oldValue  Json?       @map("old_value")
+  newValue  Json?       @map("new_value")
+  ipAddress String?     @map("ip_address") @db.VarChar(45)
+  userAgent String?     @map("user_agent") @db.VarChar(512)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([entity, entityId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([action])
+  @@map("audit_logs")
+}

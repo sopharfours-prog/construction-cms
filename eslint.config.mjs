@@ -21,9 +21,21 @@ const eslintConfig = defineConfig([
       eqeqeq: ["error", "smart"],
     },
   },
+  {
+    // CLI scripts (seed): console output is their user interface.
+    files: ["prisma/**/*.ts"],
+    rules: { "no-console": "off" },
+  },
   // Must stay last: turns off stylistic rules that Prettier owns.
   prettier,
-  globalIgnores([".next/**", "out/**", "build/**", "coverage/**", "next-env.d.ts"]),
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "build/**",
+    "coverage/**",
+    "next-env.d.ts",
+    "src/generated/**",
+  ]),
 ]);
 
 export default eslintConfig;

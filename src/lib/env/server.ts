@@ -13,6 +13,10 @@ import { z } from "zod";
  */
 const serverEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  DATABASE_URL: z
+    .string()
+    .min(1, "DATABASE_URL is required")
+    .refine((url) => /^postgres(ql)?:\/\//.test(url), "Expected a postgresql:// connection URL"),
   GOOGLE_ANALYTICS_ID: z
     .string()
     .regex(/^G-[A-Z0-9]+$/, "Expected a GA4 measurement ID such as G-XXXXXXX")

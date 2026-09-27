@@ -54,3 +54,6 @@ next-env.d.ts
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# prisma generated client (rebuilt by postinstall / prisma generate)
+/src/generated
