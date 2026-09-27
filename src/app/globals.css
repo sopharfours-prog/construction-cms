@@ -1,0 +1,257 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * ─────────────────────────────────────────────────────────────
+ * Brand layer
+ * The only values a company should need to change. Overridden at
+ * runtime by <BrandStyle /> using validated values from
+ * src/config/brand.ts (and later from Website Settings).
+ * ─────────────────────────────────────────────────────────────
+ */
+:root {
+  --brand-primary: #14325a; /* blueprint navy */
+  --brand-primary-foreground: #ffffff;
+  --brand-accent: #c99a2e; /* survey gold: fills and rules only, never body text on white */
+  --brand-accent-foreground: #1f2328;
+}
+
+/*
+ * ─────────────────────────────────────────────────────────────
+ * Semantic layer (shadcn/ui contract)
+ * Components only reference these, never raw hex values.
+ * ─────────────────────────────────────────────────────────────
+ */
+:root {
+  --radius: 0.25rem;
+
+  --background: #ffffff;
+  --foreground: #1f2328;
+
+  --card: #ffffff;
+  --card-foreground: #1f2328;
+  --popover: #ffffff;
+  --popover-foreground: #1f2328;
+
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--brand-primary-foreground);
+
+  --secondary: #eeede9;
+  --secondary-foreground: #1f2328;
+
+  --muted: #f5f4f1;
+  --muted-foreground: #5b6067;
+
+  /* shadcn "accent" is the subtle hover surface, not the brand accent */
+  --accent: #eeede9;
+  --accent-foreground: #1f2328;
+
+  --highlight: var(--brand-accent);
+  --highlight-foreground: var(--brand-accent-foreground);
+
+  --destructive: #b42318;
+  --success: #1e7a46;
+  --warning: #a8661a;
+  --info: #2c5d94;
+
+  --border: #dcdad5;
+  --input: #cfccc6;
+  --ring: var(--brand-primary);
+
+  --concrete-50: #f7f6f4;
+  --concrete-100: #eeede9;
+  --concrete-200: #dcdad5;
+  --concrete-300: #c2bfb8;
+  --concrete-400: #9d9a93;
+  --concrete-500: #7a7771;
+  --concrete-600: #5b6067;
+  --concrete-700: #3d4148;
+  --concrete-800: #2a2e33;
+  --concrete-900: #1f2328;
+
+  --chart-1: var(--brand-primary);
+  --chart-2: var(--brand-accent);
+  --chart-3: #5b7fa6;
+  --chart-4: #9d9a93;
+  --chart-5: #2f6b4f;
+
+  --sidebar: color-mix(in oklab, var(--brand-primary) 88%, black);
+  --sidebar-foreground: #e7eaef;
+  --sidebar-primary: var(--brand-accent);
+  --sidebar-primary-foreground: var(--brand-accent-foreground);
+  --sidebar-accent: color-mix(in oklab, var(--brand-primary) 88%, white);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: color-mix(in oklab, var(--brand-primary) 80%, white);
+  --sidebar-ring: var(--brand-accent);
+}
+
+.dark {
+  --background: #131619;
+  --foreground: #eceef0;
+
+  --card: #1a1e22;
+  --card-foreground: #eceef0;
+  --popover: #1a1e22;
+  --popover-foreground: #eceef0;
+
+  /* Derived from the brand so a custom brand colour keeps working in dark mode */
+  --primary: color-mix(in oklab, var(--brand-primary) 45%, white);
+  --primary-foreground: #101316;
+
+  --secondary: #252a2f;
+  --secondary-foreground: #eceef0;
+
+  --muted: #1f2327;
+  --muted-foreground: #a3a8ae;
+
+  --accent: #252a2f;
+  --accent-foreground: #eceef0;
+
+  --destructive: #f0645a;
+  --success: #4fbf80;
+  --warning: #e0a14a;
+  --info: #7fa8d8;
+
+  --border: #2e3338;
+  --input: #3a4046;
+  --ring: color-mix(in oklab, var(--brand-primary) 45%, white);
+
+  --chart-1: color-mix(in oklab, var(--brand-primary) 45%, white);
+
+  --sidebar: #101316;
+  --sidebar-accent: #20252a;
+  --sidebar-border: #2a2f34;
+}
+
+@theme inline {
+  --font-sans: var(--font-archivo), var(--font-lao), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-concrete-50: var(--concrete-50);
+  --color-concrete-100: var(--concrete-100);
+  --color-concrete-200: var(--concrete-200);
+  --color-concrete-300: var(--concrete-300);
+  --color-concrete-400: var(--concrete-400);
+  --color-concrete-500: var(--concrete-500);
+  --color-concrete-600: var(--concrete-600);
+  --color-concrete-700: var(--concrete-700);
+  --color-concrete-800: var(--concrete-800);
+  --color-concrete-900: var(--concrete-900);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    line-height: 1.6;
+  }
+
+  /* Lao script stacks vowels and tone marks: give it more vertical room */
+  :lang(lo) body,
+  body :lang(lo) {
+    line-height: 1.8;
+  }
+
+  :lang(lo) :is(h1, h2, h3, h4) {
+    line-height: 1.45;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/*
+ * Display type: Archivo's width axis set condensed, the way site
+ * hoardings and structural drawings set their titles. Lao glyphs
+ * fall back to Noto Sans Lao, which has no width axis.
+ */
+@utility type-display {
+  font-stretch: 72%;
+  font-weight: 720;
+  letter-spacing: -0.01em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+@utility type-heading {
+  font-stretch: 85%;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+@utility container-site {
+  width: 100%;
+  max-width: 88rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+
+  @media (width >= 48rem) {
+    padding-inline: 2rem;
+  }
+
+  @media (width >= 80rem) {
+    padding-inline: 3rem;
+  }
+}
