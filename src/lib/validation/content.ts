@@ -1,0 +1,156 @@
+import { z } from "zod";
+
+import { defaultLocale, locales, type Locale } from "@/config/i18n";
+import { SLUG_PATTERN } from "@/lib/content/slug";
+
+/** Validation messages are keys into the admin dictionary (`validation.*`). */
+export const slugField = z
+  .string({ error: "required" })
+  .trim()
+  .toLowerCase()
+  .min(1, { error: "required" })
+  .max(200, { error: "tooLong" })
+  .regex(SLUG_PATTERN, { error: "slugInvalid" });
+
+/** Optional text: "" becomes null. */
+export const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max, { error: "tooLong" })
+    .optional()
+    .transform((v) => (v ? v : null));
+
+export const requiredText = (max: number) =>
+  z
+    .string({ error: "required" })
+    .trim()
+    .min(1, { error: "required" })
+    .max(max, { error: "tooLong" });
+
+export const checkbox = z
+  .union([z.literal("on"), z.literal("true"), z.literal("false"), z.literal("")])
+  .optional()
+  .transform((v) => v === "on" || v === "true");
+
+/** <input type="date"> value → Date (UTC midnight) or null. */
+export const optionalDate = z
+  .string()
+  .optional()
+  .transform((v, ctx) => {
+    if (!v) return null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      ctx.addIssue({ code: "custom", error: "dateInvalid" });
+      return z.NEVER;
+    }
+    const date = new Date(`${v}T00:00:00Z`);
+    if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== v) {
+      ctx.addIssue({ code: "custom", error: "dateInvalid" });
+      return z.NEVER;
+    }
+    return date;
+  });
+
+/** <input type="datetime-local"> in Asia/Vientiane (UTC+7, no DST) → Date or null. */
+export const optionalLocalDateTime = z
+  .string()
+  .optional()
+  .transform((v, ctx) => {
+    if (!v) return null;
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) {
+      ctx.addIssue({ code: "custom", error: "dateInvalid" });
+      return z.NEVER;
+    }
+    const date = new Date(`${v}:00+07:00`);
+    if (Number.isNaN(date.getTime())) {
+      ctx.addIssue({ code: "custom", error: "dateInvalid" });
+      return z.NEVER;
+    }
+    return date;
+  });
+
+/** Money amount as a decimal string (Prisma Decimal), max 2 decimals, non-negative. */
+export const optionalAmount = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v, ctx) => {
+    if (!v) return null;
+    const normalized = v.replace(/[\s,]/g, "");
+    if (!/^\d{1,16}(\.\d{1,2})?$/.test(normalized)) {
+      ctx.addIssue({ code: "custom", error: "amountInvalid" });
+      return z.NEVER;
+    }
+    return normalized;
+  });
+
+export const currencyField = z.enum(["LAK", "USD", "THB"]).catch("LAK");
+
+/** Repeated form field or indexed object → array. */
+export const listOf = <T extends z.ZodType>(item: T, max: number) =>
+  z.preprocess(
+    (value) => {
+      if (value === undefined || value === "") return [];
+      if (Array.isArray(value)) return value;
+      if (typeof value === "object" && value !== null) return Object.values(value);
+      return [value];
+    },
+    z.array(item).max(max, { error: "tooMany" }),
+  );
+
+type Shape = Record<string, z.ZodType>;
+
+/**
+ * Per-locale fields. The default locale needs `requiredKey`; other locales
+ * are optional, but once any of their fields is filled, `requiredKey` is
+ * required too. Locales left completely empty are dropped (the public site
+ * falls back to the default language).
+ */
+export function translationsSchema<S extends Shape>(shape: S, requiredKey: keyof S & string) {
+  const entry = z.object(shape);
+  type Entry = z.output<typeof entry>;
+
+  return z
+    .object(
+      Object.fromEntries(locales.map((l) => [l, entry.optional()])) as Record<
+        Locale,
+        z.ZodOptional<typeof entry>
+      >,
+    )
+    .superRefine((value, ctx) => {
+      for (const locale of locales) {
+        const t = value[locale] as Record<string, unknown> | undefined;
+        const filled =
+          t &&
+          Object.values(t).some(
+            (v) =>
+              v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0),
+          );
+        if ((locale === defaultLocale || filled) && !t?.[requiredKey]) {
+          ctx.addIssue({ code: "custom", path: [locale, requiredKey], error: "required" });
+        }
+      }
+    })
+    .transform((value) => {
+      const out: Partial<Record<Locale, Entry>> = {};
+      for (const locale of locales) {
+        const t = value[locale] as Entry | undefined;
+        if (t && (t as Record<string, unknown>)[requiredKey]) out[locale] = t;
+      }
+      return out;
+    });
+}
+
+/** Text allowed in the requiredKey position of a translation (optional at schema level). */
+export const titleField = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max, { error: "tooLong" })
+    .optional()
+    .transform((v) => v ?? "");
+
+export const seoFields = {
+  seoTitle: optionalText(70),
+  seoDescription: optionalText(170),
+};
