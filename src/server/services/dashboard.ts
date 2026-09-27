@@ -1,7 +1,8 @@
 import "server-only";
 
 import type { InquiryStatus, ProjectStatus, QuoteStatus } from "@/generated/prisma/client";
-import { type CurrentUser, hasPermission } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/auth/permissions";
+import type { CurrentUser } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 
 const OPEN_QUOTE_STATUSES: QuoteStatus[] = ["NEW", "REVIEWING"];

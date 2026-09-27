@@ -7,6 +7,7 @@ import { db } from "@/lib/db/client";
 import { isPermissionKey, type PermissionKey } from "@/lib/permissions/registry";
 
 import { auth } from "./auth";
+import { hasPermission } from "./permissions";
 
 export type CurrentUser = {
   id: string;
@@ -65,12 +66,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   };
 });
 
-export function hasPermission(
-  user: Pick<CurrentUser, "permissions"> | null,
-  key: PermissionKey,
-): boolean {
-  return user?.permissions.has(key) ?? false;
-}
+export { hasPermission };
 
 /** Pages/layouts: signed-in user or redirect to the login page. */
 export async function requireUser(): Promise<CurrentUser> {
