@@ -20,16 +20,28 @@ type ListToolbarProps = {
   selects: ToolbarSelect[];
   labels: { apply: string; clear: string };
   hasFilters: boolean;
+  /** Extra values kept when filtering (e.g. the current folder). */
+  hidden?: Record<string, string>;
 };
 
 /** GET filter form: works without JavaScript, filters live in the URL. */
-export function ListToolbar({ basePath, search, selects, labels, hasFilters }: ListToolbarProps) {
+export function ListToolbar({
+  basePath,
+  search,
+  selects,
+  labels,
+  hasFilters,
+  hidden,
+}: ListToolbarProps) {
   return (
     <form
       method="get"
       role="search"
       className="mb-4 flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center"
     >
+      {Object.entries(hidden ?? {}).map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
       <label className="sr-only" htmlFor="list-q">
         {search.label}
       </label>

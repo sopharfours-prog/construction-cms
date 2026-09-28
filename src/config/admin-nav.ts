@@ -102,7 +102,7 @@ export const adminNav: readonly { key: AdminNavGroupKey; items: readonly AdminNa
         href: "/admin/media",
         icon: "images",
         permission: "media.view",
-        ready: false,
+        ready: true,
       },
     ],
   },
