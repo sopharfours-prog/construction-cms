@@ -15,10 +15,11 @@ export const localized = (
 
 /** Company details shown in the header and footer of every public page. */
 export const getSiteShell = cache(async (locale: Locale) => {
-  const [general, contact, social, services] = await Promise.all([
+  const [general, contact, social, seo, services] = await Promise.all([
     getSetting("general"),
     getSetting("contact"),
     getSetting("social"),
+    getSetting("seo"),
     db.service.findMany({
       where: { deletedAt: null, status: "PUBLISHED" },
       orderBy: { sortOrder: "asc" },
@@ -26,18 +27,35 @@ export const getSiteShell = cache(async (locale: Locale) => {
       select: { slug: true, translations: { select: { locale: true, title: true } } },
     }),
   ]);
-  const logo = general?.logoMediaId
-    ? await db.media.findFirst({
-        where: { id: general.logoMediaId, deletedAt: null },
-        select: { url: true, width: true, height: true },
-      })
-    : null;
+  const mediaSelect = { url: true, width: true, height: true, altText: true } as const;
+  const [logo, ogImage] = await Promise.all([
+    general?.logoMediaId
+      ? db.media.findFirst({
+          where: { id: general.logoMediaId, deletedAt: null },
+          select: mediaSelect,
+        })
+      : null,
+    seo?.ogImageMediaId
+      ? db.media.findFirst({
+          where: { id: seo.ogImageMediaId, deletedAt: null, kind: "IMAGE" },
+          select: mediaSelect,
+        })
+      : null,
+  ]);
 
   return {
     name: localized(general?.siteName, locale),
     tagline: localized(general?.tagline, locale),
     description: localized(general?.description, locale),
     logo,
+    foundedYear: general?.foundedYear ?? null,
+    seo: {
+      title: localized(seo?.defaultTitle, locale),
+      description: localized(seo?.defaultDescription, locale),
+      ogImage,
+      googleAnalyticsId: seo?.googleAnalyticsId ?? null,
+      googleSiteVerification: seo?.googleSiteVerification ?? null,
+    },
     contact: {
       address: localized(contact?.address, locale),
       phones: contact?.phones ?? [],

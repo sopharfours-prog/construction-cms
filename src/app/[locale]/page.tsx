@@ -1,5 +1,5 @@
 import { ArrowRightIcon, MapPinIcon } from "lucide-react";
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,7 +13,24 @@ import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { formatNumber } from "@/lib/format";
 import { getHomeData } from "@/server/public/content";
+import { pageMetadata } from "@/lib/seo/metadata";
 import { getSiteShell } from "@/server/public/site";
+
+export async function generateMetadata({ params }: PageProps<"/[locale]">): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocale(locale)) return {};
+  const shell = await getSiteShell(locale);
+  const title = shell.seo.title || shell.tagline || shell.name;
+  return pageMetadata({
+    locale,
+    path: "/",
+    title,
+    description: shell.seo.description || shell.description,
+    image: shell.seo.ogImage,
+    siteName: shell.name,
+    absoluteTitle: true,
+  });
+}
 
 export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;

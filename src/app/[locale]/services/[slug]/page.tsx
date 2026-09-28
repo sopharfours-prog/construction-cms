@@ -11,6 +11,9 @@ import { isLocale } from "@/config/i18n";
 import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { getPublicService, listPublicServices } from "@/server/public/content";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { getSiteShell } from "@/server/public/site";
+import { breadcrumbLd, JsonLd } from "@/lib/seo/json-ld";
 
 type Props = PageProps<"/[locale]/services/[slug]">;
 
@@ -22,12 +25,16 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!isLocale(locale)) return {};
-  const s = await getPublicService(slug, locale);
+  const [s, shell] = await Promise.all([getPublicService(slug, locale), getSiteShell(locale)]);
   if (!s) return {};
-  return {
+  return pageMetadata({
+    locale,
+    path: `/services/${s.slug}`,
     title: s.seo.title || s.title,
-    description: s.seo.description || s.description || undefined,
-  };
+    description: s.seo.description || s.description,
+    image: s.cover ?? shell.seo.ogImage,
+    siteName: shell.name,
+  });
 }
 
 export default async function ServicePage({ params }: Props) {
@@ -44,6 +51,13 @@ export default async function ServicePage({ params }: Props) {
 
   return (
     <>
+      <JsonLd
+        data={breadcrumbLd([
+          { name: t.site.nav.home, path: localizedPath(locale, "/") },
+          { name: s.title, path: localizedPath(locale, "/services") },
+          { name: service.title, path: localizedPath(locale, `/services/${service.slug}`) },
+        ])}
+      />
       <PageHero
         title={service.title}
         intro={service.description}

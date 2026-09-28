@@ -15,6 +15,10 @@ import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { formatDate, formatNumber } from "@/lib/format";
 import { getPublicProject } from "@/server/public/content";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { breadcrumbLd, JsonLd, projectLd } from "@/lib/seo/json-ld";
+import { getSiteShell } from "@/server/public/site";
+import { absoluteUrl } from "@/lib/seo/metadata";
 
 type Props = PageProps<"/[locale]/projects/[slug]">;
 
@@ -26,12 +30,19 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!isLocale(locale)) return {};
-  const project = await getPublicProject(slug, locale);
+  const [project, shell] = await Promise.all([
+    getPublicProject(slug, locale),
+    getSiteShell(locale),
+  ]);
   if (!project) return {};
-  return {
+  return pageMetadata({
+    locale,
+    path: `/projects/${project.slug}`,
     title: project.seo.title || project.title,
-    description: project.seo.description || project.summary || undefined,
-  };
+    description: project.seo.description || project.summary,
+    image: project.cover ?? project.gallery[0] ?? shell.seo.ogImage,
+    siteName: shell.name,
+  });
 }
 
 export default async function ProjectPage({ params }: Props) {
@@ -61,8 +72,29 @@ export default async function ProjectPage({ params }: Props) {
     [f.projectManager, project.projectManager],
   ];
 
+  const pageUrl = localizedPath(locale, `/projects/${project.slug}`);
   return (
     <article>
+      <JsonLd
+        data={[
+          breadcrumbLd([
+            { name: t.site.nav.home, path: localizedPath(locale, "/") },
+            { name: p.title, path: localizedPath(locale, "/projects") },
+            { name: project.title, path: pageUrl },
+          ]),
+          projectLd({
+            url: absoluteUrl(pageUrl),
+            name: project.title,
+            description: project.summary,
+            image: project.cover?.url ?? project.gallery[0]?.url,
+            location: project.location,
+            startDate: project.startDate,
+            endDate: project.completionDate,
+            orgUrl: absoluteUrl(localizedPath(locale, "/")),
+            locale,
+          }),
+        ]}
+      />
       <header className="relative isolate flex min-h-[60svh] items-end overflow-hidden bg-primary text-primary-foreground">
         {project.cover ? (
           <Image

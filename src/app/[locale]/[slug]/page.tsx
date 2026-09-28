@@ -8,6 +8,8 @@ import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { formatDate } from "@/lib/format";
 import { getPublicPage } from "@/server/public/content";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { getSiteShell } from "@/server/public/site";
 
 type Props = PageProps<"/[locale]/[slug]">;
 
@@ -20,9 +22,16 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!isLocale(locale)) return {};
-  const page = await getPublicPage(slug, locale);
+  const [page, shell] = await Promise.all([getPublicPage(slug, locale), getSiteShell(locale)]);
   if (!page) return {};
-  return { title: page.seo.title || page.title, description: page.seo.description || undefined };
+  return pageMetadata({
+    locale,
+    path: `/${page.slug}`,
+    title: page.seo.title || page.title,
+    description: page.seo.description,
+    image: page.cover ?? shell.seo.ogImage,
+    siteName: shell.name,
+  });
 }
 
 export default async function CmsPage({ params }: Props) {

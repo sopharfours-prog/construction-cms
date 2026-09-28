@@ -9,6 +9,7 @@ import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { getSiteShell } from "@/server/public/site";
 import { getSetting } from "@/server/services/settings";
+import { pageMetadata } from "@/lib/seo/metadata";
 
 export async function generateMetadata({
   params,
@@ -16,7 +17,15 @@ export async function generateMetadata({
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const t = getMessages(locale).public.contact;
-  return { title: t.title, description: t.intro };
+  const shell = await getSiteShell(locale);
+  return pageMetadata({
+    locale,
+    path: "/contact",
+    title: t.title,
+    description: t.intro,
+    image: shell.seo.ogImage,
+    siteName: shell.name,
+  });
 }
 
 export default async function ContactPage({ params }: PageProps<"/[locale]/contact">) {

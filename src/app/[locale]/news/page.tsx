@@ -11,6 +11,8 @@ import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { listPublicNews, publicNewsFilters } from "@/server/public/content";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { getSiteShell } from "@/server/public/site";
 
 /** Filters and pages come from the URL, so each request renders fresh (not a cached copy). */
 export const dynamic = "force-dynamic";
@@ -19,7 +21,15 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/news">):
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const t = getMessages(locale).public.news;
-  return { title: t.title, description: t.intro };
+  const shell = await getSiteShell(locale);
+  return pageMetadata({
+    locale,
+    path: "/news",
+    title: t.title,
+    description: t.intro,
+    image: shell.seo.ogImage,
+    siteName: shell.name,
+  });
 }
 
 export default async function NewsPage({ params, searchParams }: PageProps<"/[locale]/news">) {

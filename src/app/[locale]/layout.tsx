@@ -8,7 +8,11 @@ import { isLocale, localeConfig } from "@/config/i18n";
 import { siteConfig } from "@/config/site";
 import { sharedViewport } from "@/config/viewport";
 import { getMessages } from "@/i18n/messages";
+import { absoluteUrl, isIndexingAllowed } from "@/lib/seo/metadata";
+import { JsonLd, organizationLd } from "@/lib/seo/json-ld";
 import { getSiteShell } from "@/server/public/site";
+import { GoogleAnalytics } from "@/components/site/analytics";
+import { localizedPath } from "@/i18n/routing";
 
 import "../globals.css";
 
@@ -28,12 +32,38 @@ export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Pr
   if (!isLocale(locale)) return {};
   const shell = await getSiteShell(locale);
   const name = shell.name || siteConfig.fallbackName;
+  const indexable = isIndexingAllowed();
   return {
     metadataBase: new URL(siteConfig.url),
-    title: { default: name, template: `%s | ${name}` },
-    description: shell.description || undefined,
-    // Indexing is switched on with the SEO work (Phase 10).
-    robots: { index: false, follow: false },
+    title: { default: shell.seo.title || name, template: `%s | ${name}` },
+    description: shell.seo.description || shell.description || undefined,
+    applicationName: name,
+    robots: indexable
+      ? {
+          index: true,
+          follow: true,
+          googleBot: { index: true, follow: true, "max-image-preview": "large" },
+        }
+      : { index: false, follow: false },
+    verification: shell.seo.googleSiteVerification
+      ? { google: shell.seo.googleSiteVerification }
+      : undefined,
+    openGraph: {
+      siteName: name,
+      type: "website",
+      locale: localeConfig[locale].ogLocale,
+      images: shell.seo.ogImage
+        ? [
+            {
+              url: absoluteUrl(shell.seo.ogImage.url),
+              width: shell.seo.ogImage.width ?? undefined,
+              height: shell.seo.ogImage.height ?? undefined,
+            },
+          ]
+        : undefined,
+    },
+    twitter: { card: shell.seo.ogImage ? "summary_large_image" : "summary" },
+    formatDetection: { telephone: false },
   };
 }
 
@@ -60,6 +90,20 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[lo
         </main>
         <SiteFooter locale={locale} shell={shell} t={t.site} />
       </div>
+      <JsonLd
+        data={organizationLd({
+          name: shell.name || siteConfig.fallbackName,
+          description: shell.description,
+          url: absoluteUrl(localizedPath(locale, "/")),
+          logo: shell.logo?.url,
+          email: shell.contact.email,
+          phones: shell.contact.phones,
+          address: shell.contact.address,
+          sameAs: shell.social.map(([, url]) => url),
+          foundingYear: shell.foundedYear,
+        })}
+      />
+      <GoogleAnalytics id={shell.seo.googleAnalyticsId} />
     </RootDocument>
   );
 }

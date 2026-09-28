@@ -12,6 +12,10 @@ import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { formatDate } from "@/lib/format";
 import { getPublicNews } from "@/server/public/content";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { articleLd, breadcrumbLd, JsonLd } from "@/lib/seo/json-ld";
+import { getSiteShell } from "@/server/public/site";
+import { absoluteUrl } from "@/lib/seo/metadata";
 
 type Props = PageProps<"/[locale]/news/[slug]">;
 
@@ -23,12 +27,19 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!isLocale(locale)) return {};
-  const news = await getPublicNews(slug, locale);
+  const [news, shell] = await Promise.all([getPublicNews(slug, locale), getSiteShell(locale)]);
   if (!news) return {};
-  return {
+  return pageMetadata({
+    locale,
+    path: `/news/${news.slug}`,
     title: news.seo.title || news.title,
-    description: news.seo.description || news.excerpt || undefined,
-  };
+    description: news.seo.description || news.excerpt,
+    image: news.seo.image ?? shell.seo.ogImage,
+    type: "article",
+    publishedTime: news.publishedAt,
+    modifiedTime: news.updatedAt,
+    siteName: shell.name,
+  });
 }
 
 export default async function NewsArticlePage({ params }: Props) {
@@ -40,8 +51,29 @@ export default async function NewsArticlePage({ params }: Props) {
   const n = t.public.news;
   const base = localizedPath(locale, "/news");
 
+  const pageUrl = localizedPath(locale, `/news/${news.slug}`);
   return (
     <article>
+      <JsonLd
+        data={[
+          breadcrumbLd([
+            { name: t.site.nav.home, path: localizedPath(locale, "/") },
+            { name: n.title, path: base },
+            { name: news.title, path: pageUrl },
+          ]),
+          articleLd({
+            url: absoluteUrl(pageUrl),
+            title: news.title,
+            description: news.excerpt,
+            image: news.seo.image?.url,
+            publishedAt: news.publishedAt,
+            modifiedAt: news.updatedAt,
+            author: news.author,
+            orgUrl: absoluteUrl(localizedPath(locale, "/")),
+            locale,
+          }),
+        ]}
+      />
       <header className="container-site max-w-4xl pt-10 pb-8 lg:pt-14">
         <Breadcrumbs
           label={t.public.breadcrumb}

@@ -14,6 +14,8 @@ import {
   listPublicProjects,
   publicProjectFilters,
 } from "@/server/public/content";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { getSiteShell } from "@/server/public/site";
 
 /** Filters and pages come from the URL, so each request renders fresh (not a cached copy). */
 export const dynamic = "force-dynamic";
@@ -24,7 +26,15 @@ export async function generateMetadata({
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const t = getMessages(locale).public.projects;
-  return { title: t.title, description: t.intro };
+  const shell = await getSiteShell(locale);
+  return pageMetadata({
+    locale,
+    path: "/projects",
+    title: t.title,
+    description: t.intro,
+    image: shell.seo.ogImage,
+    siteName: shell.name,
+  });
 }
 
 export default async function ProjectsPage({

@@ -7,6 +7,8 @@ import { isLocale } from "@/config/i18n";
 import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { listPublicServices } from "@/server/public/content";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { getSiteShell } from "@/server/public/site";
 
 export async function generateMetadata({
   params,
@@ -14,7 +16,15 @@ export async function generateMetadata({
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const t = getMessages(locale).public.quote;
-  return { title: t.title, description: t.intro };
+  const shell = await getSiteShell(locale);
+  return pageMetadata({
+    locale,
+    path: "/request-quote",
+    title: t.title,
+    description: t.intro,
+    image: shell.seo.ogImage,
+    siteName: shell.name,
+  });
 }
 
 export default async function RequestQuotePage({ params }: PageProps<"/[locale]/request-quote">) {

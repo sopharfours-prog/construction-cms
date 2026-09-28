@@ -13,17 +13,23 @@ import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { formatDate } from "@/lib/format";
 import { getAboutData } from "@/server/public/content";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { getSiteShell } from "@/server/public/site";
 
 export async function generateMetadata({
   params,
 }: PageProps<"/[locale]/about">): Promise<Metadata> {
   const { locale } = await params;
   if (!isLocale(locale)) return {};
-  const { page } = await getAboutData(locale);
-  return {
+  const [{ page }, shell] = await Promise.all([getAboutData(locale), getSiteShell(locale)]);
+  return pageMetadata({
+    locale,
+    path: "/about",
     title: page?.seo.title || page?.title || getMessages(locale).public.about.title,
-    description: page?.seo.description || undefined,
-  };
+    description: page?.seo.description || shell.description,
+    image: page?.cover ?? shell.seo.ogImage,
+    siteName: shell.name,
+  });
 }
 
 export default async function AboutPage({ params }: PageProps<"/[locale]/about">) {
