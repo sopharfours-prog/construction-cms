@@ -35,6 +35,7 @@ export const getSiteShell = cache(async (locale: Locale) => {
 
   return {
     name: localized(general?.siteName, locale),
+    tagline: localized(general?.tagline, locale),
     description: localized(general?.description, locale),
     logo,
     contact: {

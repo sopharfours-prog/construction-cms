@@ -19,6 +19,10 @@ type T<F> = { lo: F; en: F };
 const sampleSettings = {
   general: {
     siteName: { lo: "ບໍລິສັດ ແມ່ຂອງ ຮໍລິຊັນ ກໍ່ສ້າງ", en: "Mekong Horizon Construction" },
+    tagline: {
+      lo: "ກໍ່ສ້າງດ້ວຍຄວາມແມ່ນຍຳ ສົ່ງມອບດ້ວຍຄວາມໄວ້ວາງໃຈ",
+      en: "Built with precision. Delivered with trust.",
+    },
     description: {
       lo: "ບໍລິສັດຮັບເໝົາກໍ່ສ້າງອາຄານ, ຖະໜົນ ແລະ ຂົວ ທົ່ວປະເທດລາວ ຕັ້ງແຕ່ປີ 2008.",
       en: "Building, road and bridge contractor working across Laos since 2008.",

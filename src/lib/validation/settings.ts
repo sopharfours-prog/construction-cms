@@ -18,6 +18,8 @@ const mediaId = z.uuid().nullable();
 
 export const generalSettingsSchema = z.object({
   siteName: localizedText(120),
+  /** Home page headline; falls back to the site name. */
+  tagline: localizedText(200).default({}),
   description: localizedText(500),
   logoMediaId: mediaId,
   faviconMediaId: mediaId,

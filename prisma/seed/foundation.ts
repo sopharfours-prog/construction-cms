@@ -125,6 +125,7 @@ export async function seedSettings(db: PrismaClient, values: { [K in SettingsKey
 export const neutralSettings = {
   general: {
     siteName: { lo: "ບໍລິສັດກໍ່ສ້າງ", en: "Construction Company" },
+    tagline: { lo: "", en: "" },
     description: { lo: "", en: "" },
     logoMediaId: null,
     faviconMediaId: null,
