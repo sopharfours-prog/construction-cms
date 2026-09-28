@@ -1,7 +1,7 @@
 import "server-only";
 
 import { maxUploadBytes, type UploadPolicyName } from "@/lib/files/sniff";
-import { ApiError } from "@/lib/api/route";
+import { ApiError } from "@/lib/api/errors";
 import { consumeRateLimit, rateLimitKey, rateLimits } from "@/server/services/rate-limit";
 
 /** Multipart overhead allowance on top of the largest file. */

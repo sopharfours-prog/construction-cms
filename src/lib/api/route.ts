@@ -10,15 +10,9 @@ import { getRequestInfo } from "@/lib/security/request-info";
 import { isSameOrigin } from "@/lib/security/same-origin";
 import { type ActionContext, ContentError } from "@/server/services/errors";
 
-export type ApiErrorCode =
-  | "unauthorized"
-  | "forbidden"
-  | "validation"
-  | "conflict"
-  | "notFound"
-  | "tooLarge"
-  | "rateLimited"
-  | "unexpected";
+import { ApiError, type ApiErrorCode } from "./errors";
+
+export { ApiError, type ApiErrorCode };
 
 const statusOf: Record<ApiErrorCode, number> = {
   unauthorized: 401,
@@ -30,16 +24,6 @@ const statusOf: Record<ApiErrorCode, number> = {
   rateLimited: 429,
   unexpected: 500,
 };
-
-export class ApiError extends Error {
-  constructor(
-    readonly code: ApiErrorCode,
-    readonly reason?: string,
-    readonly headers?: Record<string, string>,
-  ) {
-    super(code);
-  }
-}
 
 /** JSON error body: a code and optional field/reason keys, never internals. */
 export function apiError(
@@ -95,6 +79,31 @@ export function apiRoute<P = Record<string, never>>(
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025")
         return apiError("notFound");
       console.error(`[api] ${request.method} ${new URL(request.url).pathname} failed`, error);
+      return apiError("unexpected");
+    }
+  };
+}
+
+/**
+ * Public (no session) write endpoint: same-origin required to deter
+ * cross-site posting, same safe error mapping as apiRoute.
+ */
+export function publicRoute(
+  handler: (request: Request, info: ReturnType<typeof getRequestInfo>) => Promise<Response>,
+) {
+  return async (request: Request): Promise<Response> => {
+    if (!isSameOrigin(request.headers)) return apiError("forbidden", { reason: "origin" });
+    try {
+      return await handler(request, getRequestInfo(request.headers));
+    } catch (error) {
+      if (error instanceof ApiError)
+        return apiError(error.code, { reason: error.reason }, error.headers);
+      if (error instanceof ZodError) {
+        const issues: Record<string, string> = {};
+        for (const issue of error.issues) issues[issue.path.join(".")] ??= issue.message;
+        return apiError("validation", { issues });
+      }
+      console.error(`[api] public ${new URL(request.url).pathname} failed`, error);
       return apiError("unexpected");
     }
   };
