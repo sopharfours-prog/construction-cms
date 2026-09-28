@@ -865,3 +865,15 @@ model AuditLog {
   @@index([action])
   @@map("audit_logs")
 }
+
+/// Gap-tolerant, collision-free counters for human-readable reference numbers
+/// (e.g. Q-2026-000042). Incremented atomically with INSERT … ON CONFLICT.
+model ReferenceCounter {
+  scope     String   @db.VarChar(20)
+  year      Int
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([scope, year])
+  @@map("reference_counters")
+}

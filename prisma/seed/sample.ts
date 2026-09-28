@@ -1,5 +1,6 @@
 import type { PrismaClient, ProjectStatus } from "../../src/generated/prisma/client";
 
+import { nextReferenceNumber } from "../../src/server/services/reference-number";
 import { seedSettings } from "./foundation";
 import { doc } from "./rich-text";
 
@@ -1024,11 +1025,12 @@ export async function seedSampleData(db: PrismaClient, authorId: string) {
       });
     }
     const ordered = [...sampleQuotes].sort((a, b) => b.days - a.days);
-    for (const [index, q] of ordered.entries()) {
+    for (const q of ordered) {
       const createdAt = daysAgo(q.days);
       await db.quoteRequest.create({
         data: {
-          referenceNumber: `Q-${createdAt.getUTCFullYear()}-${String(index + 1).padStart(6, "0")}`,
+          // Same counter as real submissions, so later requests never collide.
+          referenceNumber: await nextReferenceNumber(db, "quote", createdAt),
           customerName: q.customerName,
           company: q.company,
           email: q.email,
