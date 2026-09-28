@@ -186,3 +186,87 @@ describe("projects service", () => {
     await expect(deleteProject(id, ctx())).rejects.toMatchObject({ code: "notFound" });
   });
 });
+
+describe("project images", () => {
+  const mediaIds: string[] = [];
+  const mediaRow = (kind: "IMAGE" | "DOCUMENT", deleted = false) => {
+    const id = randomUUID();
+    mediaIds.push(id);
+    return db.media.create({
+      data: {
+        id,
+        kind,
+        filename: `${id}.jpg`,
+        originalName: "x.jpg",
+        mimeType: kind === "IMAGE" ? "image/jpeg" : "application/pdf",
+        size: 1,
+        storageKey: `public/media/2026/09/${id}.jpg`,
+        url: `/media/media/2026/09/${id}.jpg`,
+        deletedAt: deleted ? new Date() : null,
+      },
+    });
+  };
+
+  afterAll(async () => {
+    await db.project.deleteMany({ where: { slug: `${slug}-img` } });
+    await db.media.deleteMany({ where: { id: { in: mediaIds } } });
+  });
+
+  it("saves cover and ordered gallery with per-language text; rejects non-images", async () => {
+    const [a, b, doc, gone] = [
+      await mediaRow("IMAGE"),
+      await mediaRow("IMAGE"),
+      await mediaRow("DOCUMENT"),
+      await mediaRow("IMAGE", true),
+    ];
+    const base = {
+      slug: `${slug}-img`,
+      projectStatus: "ONGOING",
+      status: "DRAFT",
+      "translations.lo.title": "ຮູບ",
+    };
+
+    await expect(
+      createProject(form({ ...base, coverImageId: doc.id }), ctx()),
+    ).rejects.toMatchObject({ field: "coverImageId", messageKey: "mediaInvalid" });
+    await expect(
+      createProject(form({ ...base, "gallery.0.mediaId": gone.id }), ctx()),
+    ).rejects.toMatchObject({ field: "gallery" });
+
+    const { id } = await createProject(
+      form({
+        ...base,
+        coverImageId: a.id,
+        "gallery.0.mediaId": b.id,
+        "gallery.0.translations.lo.caption": "ຖ່າຍຈາກທາງອາກາດ",
+        "gallery.0.translations.en.altText": "Aerial view",
+        "gallery.1.mediaId": a.id,
+        "gallery.2.mediaId": b.id, // duplicate is dropped
+      }),
+      ctx(),
+    );
+    const images = async () =>
+      db.projectImage.findMany({
+        where: { projectId: id },
+        orderBy: { sortOrder: "asc" },
+        include: { translations: { orderBy: { locale: "asc" } } },
+      });
+    let saved = await images();
+    expect((await db.project.findUniqueOrThrow({ where: { id } })).coverImageId).toBe(a.id);
+    expect(saved.map((i) => i.mediaId)).toEqual([b.id, a.id]);
+    expect(saved[0]!.translations.map((t) => [t.locale, t.altText, t.caption])).toEqual([
+      ["en", "Aerial view", null],
+      ["lo", null, "ຖ່າຍຈາກທາງອາກາດ"],
+    ]);
+
+    // Reorder and drop the cover.
+    await updateProject(
+      id,
+      form({ ...base, "gallery.0.mediaId": a.id, "gallery.1.mediaId": b.id }),
+      ctx(),
+    );
+    saved = await images();
+    expect(saved.map((i) => i.mediaId)).toEqual([a.id, b.id]);
+    expect((await db.project.findUniqueOrThrow({ where: { id } })).coverImageId).toBeNull();
+  });
+});
