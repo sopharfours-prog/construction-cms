@@ -19,6 +19,7 @@ export const rateLimits = {
   loginFailuresPerEmail: { limit: 5, windowSeconds: 15 * 60 },
   passwordResetPerIp: { limit: 10, windowSeconds: 60 * 60 },
   passwordResetPerEmail: { limit: 3, windowSeconds: 60 * 60 },
+  uploadsPerUser: { limit: 200, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** Keys hold digests only: no raw emails or IPs in the table. */
