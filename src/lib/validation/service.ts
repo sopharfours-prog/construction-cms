@@ -6,6 +6,7 @@ import { richTextField } from "@/lib/content/rich-text";
 import {
   listOf,
   optionalText,
+  optionalUuid,
   seoFields,
   slugField,
   titleField,
@@ -15,6 +16,7 @@ import {
 export const serviceInputSchema = z.object({
   slug: slugField,
   icon: z.enum(serviceIcons, { error: "invalid" }),
+  coverImageId: optionalUuid,
   status: z.enum(["DRAFT", "PUBLISHED"], { error: "invalid" }),
   translations: translationsSchema(
     {

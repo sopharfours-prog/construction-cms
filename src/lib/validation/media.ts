@@ -1,12 +1,6 @@
 import { z } from "zod";
 
-import { optionalText } from "./content";
-
-const optionalUuid = z
-  .string()
-  .optional()
-  .transform((v) => v || null)
-  .pipe(z.uuid({ error: "invalid" }).nullable());
+import { optionalText, optionalUuid } from "./content";
 
 export const mediaUpdateSchema = z.object({
   altText: optionalText(255),

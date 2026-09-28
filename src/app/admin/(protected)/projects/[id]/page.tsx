@@ -42,6 +42,16 @@ export default async function EditProjectPage({ params }: PageProps<"/admin/proj
     currency: project.currency,
     showBudget: project.showBudget,
     serviceIds: project.services.map((s) => s.serviceId),
+    coverImage: project.coverImage,
+    gallery: project.images.map((image) => ({
+      media: image.media,
+      translations: Object.fromEntries(
+        image.translations.map((t) => [
+          t.locale,
+          { altText: t.altText ?? "", caption: t.caption ?? "" },
+        ]),
+      ),
+    })),
     translations: Object.fromEntries(
       project.translations.map((tr) => [
         tr.locale,

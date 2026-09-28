@@ -28,6 +28,7 @@ export default async function EditServicePage({ params }: PageProps<"/admin/serv
     slug: service.slug,
     icon: service.icon ?? "hard-hat",
     status: service.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+    coverImage: service.coverImage,
     translations: Object.fromEntries(
       service.translations.map((tr) => [
         tr.locale,

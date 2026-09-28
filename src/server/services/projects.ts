@@ -12,6 +12,7 @@ import type { ProjectInput } from "@/lib/validation/project";
 import { type ActionContext, ContentError } from "@/server/services/errors";
 import { writeAuditLog } from "@/server/services/audit";
 
+import { assertImages, pickedMediaSelect } from "./media/media";
 import { jsonOrNull, pickTranslation, presentLocales } from "./content/translations";
 
 export const projectListSchema = z.object({
@@ -147,7 +148,18 @@ export async function getProjectFormOptions(locale: Locale) {
 export async function getProjectForEdit(id: string) {
   return db.project.findFirst({
     where: { id, deletedAt: null },
-    include: { translations: true, services: { select: { serviceId: true } } },
+    include: {
+      translations: true,
+      services: { select: { serviceId: true } },
+      coverImage: { select: pickedMediaSelect },
+      images: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          media: { select: pickedMediaSelect },
+          translations: { select: { locale: true, altText: true, caption: true } },
+        },
+      },
+    },
   });
 }
 
@@ -184,6 +196,26 @@ async function assertSlugFree(slug: string, exceptId?: string) {
   if (clash) throw new ContentError("conflict", "slug", "slugTaken");
 }
 
+function galleryData(input: ProjectInput) {
+  return input.gallery.map((item, index) => ({
+    mediaId: item.mediaId,
+    sortOrder: index,
+    translations: {
+      create: Object.entries(item.translations ?? {})
+        .filter(([, t]) => t && (t.altText || t.caption))
+        .map(([locale, t]) => ({ locale, altText: t!.altText, caption: t!.caption })),
+    },
+  }));
+}
+
+async function assertProjectImages(input: ProjectInput) {
+  if (input.coverImageId) await assertImages([input.coverImageId], "coverImageId");
+  await assertImages(
+    input.gallery.map((g) => g.mediaId),
+    "gallery",
+  );
+}
+
 function translationData(input: ProjectInput) {
   return presentLocales(input.translations).map((locale) => {
     const t = input.translations[locale]!;
@@ -207,12 +239,14 @@ function translationData(input: ProjectInput) {
 export async function createProject(input: ProjectInput, ctx: ActionContext) {
   assertPublishAllowed(ctx, null, input.status);
   await assertSlugFree(input.slug);
+  await assertProjectImages(input);
 
   return db.$transaction(async (tx) => {
     const project = await tx.project.create({
       data: {
         slug: input.slug,
         categoryId: input.categoryId,
+        coverImageId: input.coverImageId,
         projectStatus: input.projectStatus,
         status: input.status,
         featured: input.featured,
@@ -226,6 +260,7 @@ export async function createProject(input: ProjectInput, ctx: ActionContext) {
         updatedById: ctx.user.id,
         translations: { create: translationData(input) },
         services: { create: input.serviceIds.map((serviceId) => ({ serviceId })) },
+        images: { create: galleryData(input) },
       },
     });
     await writeAuditLog(
@@ -251,6 +286,7 @@ export async function updateProject(id: string, input: ProjectInput, ctx: Action
   if (!existing) throw new ContentError("notFound");
   assertPublishAllowed(ctx, existing.status, input.status);
   await assertSlugFree(input.slug, id);
+  await assertProjectImages(input);
 
   const locales = presentLocales(input.translations);
   return db.$transaction(async (tx) => {
@@ -259,6 +295,7 @@ export async function updateProject(id: string, input: ProjectInput, ctx: Action
       data: {
         slug: input.slug,
         categoryId: input.categoryId,
+        coverImageId: input.coverImageId,
         projectStatus: input.projectStatus,
         status: input.status,
         featured: input.featured,
@@ -281,6 +318,10 @@ export async function updateProject(id: string, input: ProjectInput, ctx: Action
         update: t,
       });
     }
+    // Gallery is saved as a whole: simplest correct way to apply reorders and removals.
+    await tx.projectImage.deleteMany({ where: { projectId: id } });
+    for (const image of galleryData(input))
+      await tx.projectImage.create({ data: { ...image, projectId: id } });
     await tx.projectService.deleteMany({ where: { projectId: id } });
     if (input.serviceIds.length) {
       await tx.projectService.createMany({

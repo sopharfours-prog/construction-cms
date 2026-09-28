@@ -158,3 +158,30 @@ export const seoFields = {
   seoTitle: optionalText(70),
   seoDescription: optionalText(170),
 };
+
+/** Optional id from a select or hidden input: "" becomes null. */
+export const optionalUuid = z
+  .string()
+  .optional()
+  .transform((v) => v || null)
+  .pipe(z.uuid({ error: "invalid" }).nullable());
+
+const galleryText = z.object({ altText: optionalText(255), caption: optionalText(500) });
+
+/** Ordered images with per-language alt text and captions; duplicates are dropped. */
+export const galleryField = listOf(
+  z.object({
+    mediaId: z.uuid({ error: "invalid" }),
+    translations: z
+      .object(
+        Object.fromEntries(locales.map((l) => [l, galleryText.optional()])) as Record<
+          Locale,
+          z.ZodOptional<typeof galleryText>
+        >,
+      )
+      .optional(),
+  }),
+  60,
+).transform((items) =>
+  items.filter((item, index) => items.findIndex((x) => x.mediaId === item.mediaId) === index),
+);

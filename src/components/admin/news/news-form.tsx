@@ -4,6 +4,8 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { MediaField } from "@/components/admin/media/media-field";
+import type { PickedImage } from "@/components/admin/media/media-picker";
 import { FormField, fieldId } from "@/components/admin/form/form-field";
 import { FormActions, FormSection } from "@/components/admin/form/form-section";
 import { RichTextEditor } from "@/components/admin/form/rich-text-editor";
@@ -28,6 +30,8 @@ export type NewsFormValues = {
   status: Status;
   publishedAt: string;
   tagIds: string[];
+  coverImage: PickedImage | null;
+  seoImage: PickedImage | null;
   translations: Partial<
     Record<
       Locale,
@@ -44,7 +48,7 @@ type Props = {
   initial?: NewsFormValues;
   options: { categories: { id: string; name: string }[]; tags: { id: string; name: string }[] };
   canPublish: boolean;
-  labels: Pick<AdminMessages, "common" | "validation" | "news">;
+  labels: Pick<AdminMessages, "common" | "validation" | "news" | "media">;
 };
 
 export function NewsForm({ action, initial, options, canPublish, labels }: Props) {
@@ -196,6 +200,24 @@ export function NewsForm({ action, initial, options, canPublish, labels }: Props
                 />
               )}
             </FormField>
+          </FormSection>
+
+          <FormSection title={c.coverImage}>
+            <MediaField
+              name="coverImageId"
+              label={c.coverImage}
+              error={errorFor("coverImageId")}
+              defaultValue={initial?.coverImage ?? null}
+              labels={labels}
+            />
+            <MediaField
+              name="seoImageId"
+              label={c.shareImage}
+              hint={c.shareImageHint}
+              error={errorFor("seoImageId")}
+              defaultValue={initial?.seoImage ?? null}
+              labels={labels}
+            />
           </FormSection>
 
           <FormSection title={n.sections.taxonomy}>

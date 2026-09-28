@@ -4,6 +4,9 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { MediaField } from "@/components/admin/media/media-field";
+import type { PickedImage } from "@/components/admin/media/media-picker";
+import { GalleryEditor, type GalleryItem } from "@/components/admin/media/gallery-editor";
 import { FormField, fieldId } from "@/components/admin/form/form-field";
 import { FormActions, FormSection } from "@/components/admin/form/form-section";
 import { KeyValueList } from "@/components/admin/form/key-value-list";
@@ -33,6 +36,8 @@ export type ProjectFormValues = {
   currency: string;
   showBudget: boolean;
   serviceIds: string[];
+  coverImage: PickedImage | null;
+  gallery: GalleryItem[];
   translations: Partial<
     Record<
       Locale,
@@ -61,7 +66,7 @@ type ProjectFormProps = {
   initial?: ProjectFormValues;
   options: { categories: { id: string; name: string }[]; services: { id: string; name: string }[] };
   canPublish: boolean;
-  labels: Pick<AdminMessages, "common" | "validation" | "projects" | "status">;
+  labels: Pick<AdminMessages, "common" | "validation" | "projects" | "status" | "media">;
 };
 
 export function ProjectForm({ action, initial, options, canPublish, labels }: ProjectFormProps) {
@@ -210,10 +215,26 @@ export function ProjectForm({ action, initial, options, canPublish, labels }: Pr
               }}
             </TranslationTabs>
           </FormSection>
+          <FormSection title={p.gallery.title}>
+            <GalleryEditor name="gallery" defaultValue={initial?.gallery ?? []} labels={labels} />
+            {errorFor("gallery") ? (
+              <p className="text-sm text-destructive" role="alert">
+                {errorFor("gallery")}
+              </p>
+            ) : null}
+          </FormSection>
         </div>
 
         <div className="grid content-start gap-6">
           <FormSection title={p.sections.details}>
+            <MediaField
+              name="coverImageId"
+              label={p.coverImage}
+              hint={p.coverHint}
+              error={errorFor("coverImageId")}
+              defaultValue={initial?.coverImage ?? null}
+              labels={labels}
+            />
             <FormField id="f-slug" label={c.slug} hint={c.slugHint} error={errorFor("slug")}>
               {(a) => (
                 <SlugInput

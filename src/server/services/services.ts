@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { deletedSlug } from "@/lib/content/slug";
 import { db } from "@/lib/db/client";
 import type { ServiceInput } from "@/lib/validation/service";
+import { assertImages, pickedMediaSelect } from "@/server/services/media/media";
 import { writeAuditLog } from "@/server/services/audit";
 import { type ActionContext, ContentError } from "@/server/services/errors";
 
@@ -38,7 +39,10 @@ export async function listServices(locale: Locale) {
 }
 
 export function getServiceForEdit(id: string) {
-  return db.service.findFirst({ where: { id, deletedAt: null }, include: { translations: true } });
+  return db.service.findFirst({
+    where: { id, deletedAt: null },
+    include: { translations: true, coverImage: { select: pickedMediaSelect } },
+  });
 }
 
 function translationData(input: ServiceInput) {
@@ -76,6 +80,7 @@ const titles = (input: ServiceInput) =>
 export async function createService(input: ServiceInput, ctx: ActionContext) {
   assertPublishAllowed(ctx, null, input.status);
   await assertSlugFree(input.slug);
+  if (input.coverImageId) await assertImages([input.coverImageId], "coverImageId");
   return db.$transaction(async (tx) => {
     const last = await tx.service.aggregate({
       where: { deletedAt: null },
@@ -84,6 +89,7 @@ export async function createService(input: ServiceInput, ctx: ActionContext) {
     const service = await tx.service.create({
       data: {
         slug: input.slug,
+        coverImageId: input.coverImageId,
         icon: input.icon,
         status: input.status,
         sortOrder: (last._max.sortOrder ?? -1) + 1,
@@ -114,6 +120,7 @@ export async function updateService(id: string, input: ServiceInput, ctx: Action
   if (!existing) throw new ContentError("notFound");
   assertPublishAllowed(ctx, existing.status, input.status);
   await assertSlugFree(input.slug, id);
+  if (input.coverImageId) await assertImages([input.coverImageId], "coverImageId");
   const locales = presentLocales(input.translations);
 
   return db.$transaction(async (tx) => {
@@ -121,6 +128,7 @@ export async function updateService(id: string, input: ServiceInput, ctx: Action
       where: { id },
       data: {
         slug: input.slug,
+        coverImageId: input.coverImageId,
         icon: input.icon,
         status: input.status,
         publishedAt: input.status === "PUBLISHED" ? (existing.publishedAt ?? new Date()) : null,

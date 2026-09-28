@@ -6,22 +6,19 @@ import {
   listOf,
   optionalLocalDateTime,
   optionalText,
+  optionalUuid,
   seoFields,
   slugField,
   titleField,
   translationsSchema,
 } from "./content";
 
-const optionalUuid = z
-  .string()
-  .optional()
-  .transform((v) => v || null)
-  .pipe(z.uuid({ error: "invalid" }).nullable());
-
 export const newsInputSchema = z
   .object({
     slug: slugField,
     categoryId: optionalUuid,
+    coverImageId: optionalUuid,
+    seoImageId: optionalUuid,
     status: z.enum(["DRAFT", "PUBLISHED", "SCHEDULED", "ARCHIVED"], { error: "invalid" }),
     publishedAt: optionalLocalDateTime,
     tagIds: listOf(z.uuid({ error: "invalid" }), 20),

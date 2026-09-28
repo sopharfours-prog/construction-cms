@@ -5,6 +5,8 @@ import { richTextField } from "@/lib/content/rich-text";
 
 import {
   checkbox,
+  galleryField,
+  optionalUuid,
   currencyField,
   listOf,
   optionalAmount,
@@ -16,16 +18,12 @@ import {
   translationsSchema,
 } from "./content";
 
-const optionalUuid = z
-  .string()
-  .optional()
-  .transform((v) => v || null)
-  .pipe(z.uuid({ error: "invalid" }).nullable());
-
 export const projectInputSchema = z
   .object({
     slug: slugField,
     categoryId: optionalUuid,
+    coverImageId: optionalUuid,
+    gallery: galleryField,
     projectStatus: z.enum(ProjectStatus, { error: "invalid" }),
     status: z.enum(["DRAFT", "PUBLISHED"], { error: "invalid" }),
     featured: checkbox,

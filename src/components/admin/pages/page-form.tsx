@@ -4,6 +4,8 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { MediaField } from "@/components/admin/media/media-field";
+import type { PickedImage } from "@/components/admin/media/media-picker";
 import { FormField, fieldId } from "@/components/admin/form/form-field";
 import { FormActions, FormSection } from "@/components/admin/form/form-section";
 import { RichTextEditor } from "@/components/admin/form/rich-text-editor";
@@ -23,6 +25,7 @@ export type PageFormValues = {
   slug: string;
   status: "DRAFT" | "PUBLISHED";
   system: boolean;
+  coverImage: PickedImage | null;
   translations: Partial<
     Record<Locale, { title: string; content: unknown; seoTitle: string; seoDescription: string }>
   >;
@@ -35,7 +38,7 @@ type Props = {
   ) => Promise<ActionResult<{ id: string }>>;
   initial?: PageFormValues;
   canPublish: boolean;
-  labels: Pick<AdminMessages, "common" | "validation" | "pages">;
+  labels: Pick<AdminMessages, "common" | "validation" | "pages" | "media">;
 };
 
 export function PageForm({ action, initial, canPublish, labels }: Props) {
@@ -125,6 +128,13 @@ export function PageForm({ action, initial, canPublish, labels }: Props) {
         </div>
         <div className="grid content-start gap-6">
           <FormSection title={p.sections.details}>
+            <MediaField
+              name="coverImageId"
+              label={c.coverImage}
+              error={errorFor("coverImageId")}
+              defaultValue={initial?.coverImage ?? null}
+              labels={labels}
+            />
             {initial?.system ? (
               <>
                 <input type="hidden" name="slug" value={initial.slug} />

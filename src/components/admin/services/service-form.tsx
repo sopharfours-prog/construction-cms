@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { MediaField } from "@/components/admin/media/media-field";
+import type { PickedImage } from "@/components/admin/media/media-picker";
 import { FormField, fieldId } from "@/components/admin/form/form-field";
 import { FormActions, FormSection } from "@/components/admin/form/form-section";
 import { KeyValueList } from "@/components/admin/form/key-value-list";
@@ -28,6 +30,7 @@ export type ServiceFormValues = {
   slug: string;
   icon: string;
   status: "DRAFT" | "PUBLISHED";
+  coverImage: PickedImage | null;
   translations: Partial<
     Record<
       Locale,
@@ -50,7 +53,7 @@ type Props = {
   ) => Promise<ActionResult<{ id: string }>>;
   initial?: ServiceFormValues;
   canPublish: boolean;
-  labels: Pick<AdminMessages, "common" | "validation" | "services">;
+  labels: Pick<AdminMessages, "common" | "validation" | "services" | "media">;
 };
 
 export function ServiceForm({ action, initial, canPublish, labels }: Props) {
@@ -178,6 +181,13 @@ export function ServiceForm({ action, initial, canPublish, labels }: Props) {
 
         <div className="grid content-start gap-6">
           <FormSection title={s.sections.details}>
+            <MediaField
+              name="coverImageId"
+              label={c.coverImage}
+              error={errorFor("coverImageId")}
+              defaultValue={initial?.coverImage ?? null}
+              labels={labels}
+            />
             <FormField id="f-slug" label={c.slug} hint={c.slugHint} error={errorFor("slug")}>
               {(a) => (
                 <SlugInput

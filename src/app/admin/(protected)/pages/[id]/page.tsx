@@ -39,6 +39,7 @@ export default async function EditPagePage({ params }: PageProps<"/admin/pages/[
           slug: page.slug,
           status: page.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
           system: isSystemPage(page.slug),
+          coverImage: page.coverImage,
           translations: Object.fromEntries(
             page.translations.map((tr) => [
               tr.locale,

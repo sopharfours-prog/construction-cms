@@ -46,6 +46,17 @@ export const mediaSelect = {
   createdAt: true,
 } satisfies Prisma.MediaSelect;
 
+/** Fields the CMS forms need to preview a chosen image. */
+export const pickedMediaSelect = {
+  id: true,
+  url: true,
+  altText: true,
+  blurDataUrl: true,
+  originalName: true,
+  kind: true,
+  mimeType: true,
+} satisfies Prisma.MediaSelect;
+
 export type MediaItem = Prisma.MediaGetPayload<{ select: typeof mediaSelect }>;
 
 export async function listMedia(filters: MediaListFilters, pageSize = MEDIA_PAGE_SIZE) {

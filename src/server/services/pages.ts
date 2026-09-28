@@ -6,6 +6,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { deletedSlug } from "@/lib/content/slug";
 import { db } from "@/lib/db/client";
 import type { PageInput } from "@/lib/validation/page";
+import { assertImages, pickedMediaSelect } from "@/server/services/media/media";
 import { writeAuditLog } from "@/server/services/audit";
 import { type ActionContext, ContentError } from "@/server/services/errors";
 
@@ -34,7 +35,10 @@ export async function listPages(locale: Locale) {
 }
 
 export function getPageForEdit(id: string) {
-  return db.page.findFirst({ where: { id, deletedAt: null }, include: { translations: true } });
+  return db.page.findFirst({
+    where: { id, deletedAt: null },
+    include: { translations: true, coverImage: { select: pickedMediaSelect } },
+  });
 }
 
 function translationData(input: PageInput) {
@@ -69,10 +73,12 @@ const titles = (input: PageInput) =>
 export async function createPage(input: PageInput, ctx: ActionContext) {
   assertPublishAllowed(ctx, null, input.status);
   await assertSlugFree(input.slug);
+  if (input.coverImageId) await assertImages([input.coverImageId], "coverImageId");
   return db.$transaction(async (tx) => {
     const page = await tx.page.create({
       data: {
         slug: input.slug,
+        coverImageId: input.coverImageId,
         status: input.status,
         publishedAt: input.status === "PUBLISHED" ? new Date() : null,
         translations: { create: translationData(input) },
@@ -100,6 +106,7 @@ export async function updatePage(id: string, input: PageInput, ctx: ActionContex
     throw new ContentError("validation", "slug", "systemPage");
   assertPublishAllowed(ctx, existing.status, input.status);
   await assertSlugFree(input.slug, id);
+  if (input.coverImageId) await assertImages([input.coverImageId], "coverImageId");
   const locales = presentLocales(input.translations);
 
   return db.$transaction(async (tx) => {
@@ -107,6 +114,7 @@ export async function updatePage(id: string, input: PageInput, ctx: ActionContex
       where: { id },
       data: {
         slug: input.slug,
+        coverImageId: input.coverImageId,
         status: input.status,
         publishedAt: input.status === "PUBLISHED" ? (existing.publishedAt ?? new Date()) : null,
       },

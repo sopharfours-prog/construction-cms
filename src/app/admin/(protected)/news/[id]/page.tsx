@@ -31,6 +31,8 @@ export default async function EditNewsPage({ params }: PageProps<"/admin/news/[i
     status: news.status,
     publishedAt: toVientianeInput(news.publishedAt),
     tagIds: news.tags.map((x) => x.tagId),
+    coverImage: news.coverImage,
+    seoImage: news.seoImage,
     translations: Object.fromEntries(
       news.translations.map((tr) => [
         tr.locale,

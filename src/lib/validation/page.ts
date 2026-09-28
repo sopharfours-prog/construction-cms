@@ -2,10 +2,11 @@ import { z } from "zod";
 
 import { richTextField } from "@/lib/content/rich-text";
 
-import { seoFields, slugField, titleField, translationsSchema } from "./content";
+import { optionalUuid, seoFields, slugField, titleField, translationsSchema } from "./content";
 
 export const pageInputSchema = z.object({
   slug: slugField,
+  coverImageId: optionalUuid,
   status: z.enum(["DRAFT", "PUBLISHED"], { error: "invalid" }),
   translations: translationsSchema(
     { title: titleField(200), content: richTextField, ...seoFields },

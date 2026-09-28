@@ -9,6 +9,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { deletedSlug } from "@/lib/content/slug";
 import { db } from "@/lib/db/client";
 import type { NewsInput } from "@/lib/validation/news";
+import { assertImages, pickedMediaSelect } from "@/server/services/media/media";
 import { writeAuditLog } from "@/server/services/audit";
 import { type ActionContext, ContentError } from "@/server/services/errors";
 
@@ -103,7 +104,12 @@ export async function getNewsFormOptions(locale: Locale) {
 export function getNewsForEdit(id: string) {
   return db.news.findFirst({
     where: { id, deletedAt: null },
-    include: { translations: true, tags: { select: { tagId: true } } },
+    include: {
+      translations: true,
+      tags: { select: { tagId: true } },
+      coverImage: { select: pickedMediaSelect },
+      seoImage: { select: pickedMediaSelect },
+    },
   });
 }
 
@@ -157,10 +163,14 @@ const auditAction = (from: string, to: string) =>
 export async function createNews(input: NewsInput, ctx: ActionContext) {
   assertPublishAllowed(ctx, null, input.status);
   await assertSlugFree(input.slug);
+  if (input.coverImageId) await assertImages([input.coverImageId], "coverImageId");
+  if (input.seoImageId) await assertImages([input.seoImageId], "seoImageId");
   return db.$transaction(async (tx) => {
     const news = await tx.news.create({
       data: {
         slug: input.slug,
+        coverImageId: input.coverImageId,
+        seoImageId: input.seoImageId,
         categoryId: input.categoryId,
         authorId: ctx.user.id,
         status: input.status,
@@ -197,6 +207,8 @@ export async function updateNews(id: string, input: NewsInput, ctx: ActionContex
   if (!existing) throw new ContentError("notFound");
   assertPublishAllowed(ctx, existing.status, input.status);
   await assertSlugFree(input.slug, id);
+  if (input.coverImageId) await assertImages([input.coverImageId], "coverImageId");
+  if (input.seoImageId) await assertImages([input.seoImageId], "seoImageId");
   const locales = presentLocales(input.translations);
 
   return db.$transaction(async (tx) => {
@@ -204,6 +216,8 @@ export async function updateNews(id: string, input: NewsInput, ctx: ActionContex
       where: { id },
       data: {
         slug: input.slug,
+        coverImageId: input.coverImageId,
+        seoImageId: input.seoImageId,
         categoryId: input.categoryId,
         status: input.status,
         publishedAt: resolvePublishedAt(input, existing.publishedAt),
