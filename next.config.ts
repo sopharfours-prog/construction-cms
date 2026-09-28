@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import type { RemotePattern } from "next/dist/shared/lib/image-config";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -21,14 +22,31 @@ const securityHeaders = [
     : []),
 ];
 
+/** Only the public storage URL (S3 / R2 / CDN / MinIO) may serve images to next/image. */
+function storageImagePatterns(): RemotePattern[] {
+  const base = process.env.S3_PUBLIC_URL;
+  if (process.env.STORAGE_DRIVER !== "s3" || !base) return [];
+  const url = new URL(base);
+  return [
+    {
+      protocol: url.protocol.replace(":", "") as "http" | "https",
+      hostname: url.hostname,
+      port: url.port,
+      pathname: `${url.pathname.replace(/\/+$/, "")}/public/**`,
+    },
+  ];
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
   images: {
     formats: ["image/avif", "image/webp"],
-    // Remote storage hosts (S3 / R2 / MinIO) are added from env in Phase 6.
-    remotePatterns: [],
+    remotePatterns: storageImagePatterns(),
+    // MinIO on a private network address needs this; off unless explicitly enabled
+    // because it lets the image optimizer fetch from internal hosts.
+    dangerouslyAllowLocalIP: process.env.IMAGES_ALLOW_LOCAL_IP === "true",
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
