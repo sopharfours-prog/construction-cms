@@ -34,6 +34,8 @@ export const contactSettingsSchema = z.object({
         .regex(/^[+0-9 ()-]{6,30}$/, "Invalid phone number"),
     )
     .max(5),
+  /** Internal address for new-request notifications; falls back to `email`. */
+  notificationEmail: z.email().nullable().default(null),
   email: z.email(),
   openingHours: localizedText(200),
   /** Only Google Maps embed URLs, since the value is used as an iframe src. */

@@ -4,7 +4,13 @@ import nodemailer, { type Transporter } from "nodemailer";
 
 import { getServerEnv } from "@/lib/env/server";
 
-export type MailMessage = { to: string; subject: string; text: string; html?: string };
+export type MailMessage = {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  replyTo?: string;
+};
 
 let transporter: Transporter | null | undefined;
 
