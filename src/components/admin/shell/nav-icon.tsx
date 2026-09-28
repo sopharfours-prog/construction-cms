@@ -8,6 +8,7 @@ import {
   NewspaperIcon,
   ScrollTextIcon,
   SettingsIcon,
+  ShieldIcon,
   TagsIcon,
   UsersIcon,
   WrenchIcon,
@@ -29,6 +30,7 @@ const icons: Record<AdminNavIcon, LucideIcon> = {
   "scroll-text": ScrollTextIcon,
   settings: SettingsIcon,
   tags: TagsIcon,
+  shield: ShieldIcon,
 };
 
 export function NavIcon({ name, className }: { name: AdminNavIcon; className?: string }) {

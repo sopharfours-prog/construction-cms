@@ -19,7 +19,8 @@ export type AdminNavIcon =
   | "users"
   | "scroll-text"
   | "settings"
-  | "tags";
+  | "tags"
+  | "shield";
 
 export type AdminNavItemKey =
   | "dashboard"
@@ -32,6 +33,7 @@ export type AdminNavItemKey =
   | "inquiries"
   | "quotes"
   | "users"
+  | "roles"
   | "auditLogs"
   | "settings";
 
@@ -128,7 +130,14 @@ export const adminNav: readonly { key: AdminNavGroupKey; items: readonly AdminNa
   {
     key: "system",
     items: [
-      { key: "users", href: "/admin/users", icon: "users", permission: "users.view", ready: false },
+      { key: "users", href: "/admin/users", icon: "users", permission: "users.view", ready: true },
+      {
+        key: "roles",
+        href: "/admin/roles",
+        icon: "shield",
+        permission: "roles.manage",
+        ready: true,
+      },
       {
         key: "auditLogs",
         href: "/admin/audit-logs",
