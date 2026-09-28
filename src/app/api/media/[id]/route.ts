@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { apiRoute, ApiError } from "@/lib/api/route";
+import { revalidatePublicSite } from "@/server/actions/revalidate";
 import { mediaUpdateSchema } from "@/lib/validation/media";
 import { deleteMedia, getMedia, getMediaUsage, updateMedia } from "@/server/services/media/media";
 
@@ -26,10 +27,14 @@ export const PATCH = apiRoute<Params>("media.update", async (request, ctx) => {
   const body = await request.json().catch(() => {
     throw new ApiError("validation", "invalidJson");
   });
-  return updateMedia(idOf(ctx.params), mediaUpdateSchema.parse(body), ctx);
+  const media = await updateMedia(idOf(ctx.params), mediaUpdateSchema.parse(body), ctx);
+  revalidatePublicSite();
+  return media;
 });
 
 /** DELETE /api/media/:id → 409 mediaInUse while anything displays it. */
-export const DELETE = apiRoute<Params>("media.delete", async (_request, ctx) =>
-  deleteMedia(idOf(ctx.params), ctx),
-);
+export const DELETE = apiRoute<Params>("media.delete", async (_request, ctx) => {
+  const result = await deleteMedia(idOf(ctx.params), ctx);
+  revalidatePublicSite();
+  return result;
+});

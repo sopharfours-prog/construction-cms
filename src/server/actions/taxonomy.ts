@@ -7,6 +7,7 @@ import type { ActionResult } from "@/lib/actions";
 import { taxonomyInputSchema } from "@/lib/validation/taxonomy";
 import { deleteTaxonomy, saveTaxonomy } from "@/server/services/taxonomy";
 
+import { revalidatePublicSite } from "./revalidate";
 import { runAction } from "./run";
 
 export async function saveTaxonomyAction(
@@ -17,7 +18,10 @@ export async function saveTaxonomyAction(
   const r = await runAction("taxonomy.manage", taxonomyInputSchema, formData, (input, ctx) =>
     saveTaxonomy(id ? z.uuid().parse(id) : null, input, ctx),
   );
-  if (r.ok) revalidatePath("/admin/taxonomy");
+  if (r.ok) {
+    revalidatePath("/admin/taxonomy");
+    revalidatePublicSite();
+  }
   return r;
 }
 
@@ -28,6 +32,9 @@ export async function deleteTaxonomyAction(kind: "category" | "tag", id: string)
     { kind, id },
     (d, ctx) => deleteTaxonomy(d.kind, d.id, ctx),
   );
-  if (r.ok) revalidatePath("/admin/taxonomy");
+  if (r.ok) {
+    revalidatePath("/admin/taxonomy");
+    revalidatePublicSite();
+  }
   return r;
 }

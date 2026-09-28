@@ -13,10 +13,12 @@ import {
   updateService,
 } from "@/server/services/services";
 
+import { revalidatePublicSite } from "./revalidate";
 import { runAction } from "./run";
 
 const idSchema = z.object({ id: z.uuid() });
 const refresh = () => {
+  revalidatePublicSite();
   revalidatePath("/admin/services");
   revalidatePath("/admin");
 };

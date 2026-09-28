@@ -7,9 +7,11 @@ import type { ActionResult } from "@/lib/actions";
 import { newsInputSchema } from "@/lib/validation/news";
 import { createNews, deleteNews, setNewsStatus, updateNews } from "@/server/services/news";
 
+import { revalidatePublicSite } from "./revalidate";
 import { runAction } from "./run";
 
 const refresh = () => {
+  revalidatePublicSite();
   revalidatePath("/admin/news");
   revalidatePath("/admin");
 };

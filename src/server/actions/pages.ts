@@ -7,9 +7,13 @@ import type { ActionResult } from "@/lib/actions";
 import { pageInputSchema } from "@/lib/validation/page";
 import { createPage, deletePage, setPagePublished, updatePage } from "@/server/services/pages";
 
+import { revalidatePublicSite } from "./revalidate";
 import { runAction } from "./run";
 
-const refresh = () => revalidatePath("/admin/pages");
+const refresh = () => {
+  revalidatePath("/admin/pages");
+  revalidatePublicSite();
+};
 
 export async function createPageAction(
   _prev: ActionResult<{ id: string }> | null,

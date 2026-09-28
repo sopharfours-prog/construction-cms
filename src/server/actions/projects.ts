@@ -12,11 +12,13 @@ import {
   updateProject,
 } from "@/server/services/projects";
 
+import { revalidatePublicSite } from "./revalidate";
 import { runAction } from "./run";
 
 const idSchema = z.object({ id: z.uuid() });
 
 function refresh() {
+  revalidatePublicSite();
   revalidatePath("/admin/projects");
   revalidatePath("/admin");
 }
