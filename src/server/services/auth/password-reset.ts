@@ -38,11 +38,27 @@ export async function requestPasswordReset(email: string, request: RequestInfo):
   });
   if (!user) return;
 
+  try {
+    await issuePasswordLink(user);
+  } catch (error) {
+    // Logged for operators; the visitor still sees the generic confirmation.
+    console.error("[password-reset] could not send email", error);
+  }
+}
+
+/**
+ * Create a single-use link (older unused links stop working) and email it.
+ * Throws if the email can't be sent, so staff-initiated resets can report it.
+ */
+export async function issuePasswordLink(user: {
+  id: string;
+  email: string;
+  preferredLocale: string | null;
+}): Promise<void> {
   const token = generateToken();
   const now = new Date();
 
   await db.$transaction([
-    // Only the newest link works.
     db.passwordResetToken.updateMany({
       where: { userId: user.id, usedAt: null },
       data: { usedAt: now },
@@ -61,26 +77,21 @@ export async function requestPasswordReset(email: string, request: RequestInfo):
   const primary = getMessages(locale).auth.resetEmail;
   const secondary = getMessages(locale === "en" ? "lo" : "en").auth.resetEmail;
 
-  try {
-    await sendMail({
-      to: user.email,
-      subject: `${primary.subject} / ${secondary.subject}`,
-      text: [
-        primary.body(RESET_TOKEN_TTL_MINUTES),
-        link,
-        primary.ignore,
-        "",
-        "—",
-        "",
-        secondary.body(RESET_TOKEN_TTL_MINUTES),
-        link,
-        secondary.ignore,
-      ].join("\n"),
-    });
-  } catch (error) {
-    // Logged for operators; the visitor still sees the generic confirmation.
-    console.error("[password-reset] could not send email", error);
-  }
+  await sendMail({
+    to: user.email,
+    subject: `${primary.subject} / ${secondary.subject}`,
+    text: [
+      primary.body(RESET_TOKEN_TTL_MINUTES),
+      link,
+      primary.ignore,
+      "",
+      "—",
+      "",
+      secondary.body(RESET_TOKEN_TTL_MINUTES),
+      link,
+      secondary.ignore,
+    ].join("\n"),
+  });
 }
 
 export type ResetResult = { ok: true } | { ok: false; reason: "invalid_or_expired" };
