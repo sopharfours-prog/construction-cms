@@ -41,6 +41,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
+  experimental: {
+    // The site and the CMS are separate root layouts, so unmatched URLs need a
+    // global 404 (Next.js docs: global-not-found). Re-check when upgrading Next.js.
+    globalNotFound: true,
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: storageImagePatterns(),
