@@ -4,8 +4,8 @@ Corporate website and content management system for a construction company.
 Public site in Lao and English, with a role-based admin CMS for projects,
 services, news, media, inquiries and quote requests.
 
-> **Status: Phase 7 of 14 (customer requests).** Language routing and the public
-> website are built in later phases. See [Roadmap](#roadmap).
+> **Status: Phase 8 of 14 (multilingual routing).** The public website pages are
+> built in the next phase. See [Roadmap](#roadmap).
 
 ## Stack
 
@@ -167,7 +167,7 @@ used in this project.
 5. ✅ CMS core (projects, services, news, pages, categories, tags)
 6. ✅ Media library and object storage
 7. ✅ Contact inquiries and quote requests
-8. Multilingual routing (Lao / English)
+8. ✅ Multilingual routing (/lo, /en) and public site shell
 9. Public website
 10. SEO and performance
 11. Security hardening (CSP, rate limiting, audit)
