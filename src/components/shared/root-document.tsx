@@ -10,7 +10,17 @@ import { archivo, notoSansLao } from "@/app/fonts";
  * separate root layouts so each can set its own `lang` without reading
  * request headers (which would make every public page dynamic).
  */
-export function RootDocument({ lang, children }: { lang: string; children: React.ReactNode }) {
+export function RootDocument({
+  lang,
+  children,
+  brand,
+  defaultTheme = "light",
+}: {
+  lang: string;
+  children: React.ReactNode;
+  brand?: unknown;
+  defaultTheme?: "light" | "dark" | "system";
+}) {
   return (
     <html
       lang={lang}
@@ -20,12 +30,12 @@ export function RootDocument({ lang, children }: { lang: string; children: React
       {/* App Router root document: <head> is correct here (the rule targets the Pages Router). */}
       {/* eslint-disable-next-line @next/next/no-head-element */}
       <head>
-        <BrandStyle />
+        <BrandStyle tokens={brand} />
       </head>
       <body className="min-h-dvh">
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme={defaultTheme}
           enableSystem
           disableTransitionOnChange
         >

@@ -6,6 +6,6 @@ import { buildBrandCss } from "@/lib/theme/brand";
  * Website Settings once the database exists; invalid input falls back
  * to the default brand.
  */
-export function BrandStyle({ tokens = defaultBrand }: { tokens?: unknown }) {
-  return <style id="brand-tokens">{buildBrandCss(tokens, defaultBrand)}</style>;
+export function BrandStyle({ tokens }: { tokens?: unknown }) {
+  return <style id="brand-tokens">{buildBrandCss(tokens ?? defaultBrand, defaultBrand)}</style>;
 }
