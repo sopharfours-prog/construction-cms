@@ -150,7 +150,7 @@ export const adminNav: readonly { key: AdminNavGroupKey; items: readonly AdminNa
         href: "/admin/settings",
         icon: "settings",
         permission: "settings.view",
-        ready: false,
+        ready: true,
       },
     ],
   },
