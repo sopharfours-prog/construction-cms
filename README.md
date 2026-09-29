@@ -4,8 +4,8 @@ Corporate website and content management system for a construction company.
 Public site in Lao and English, with a role-based admin CMS for projects,
 services, news, media, inquiries and quote requests.
 
-> **Status: Phase 10 of 14, plus users, roles, website settings and About content.**
-> Security hardening, E2E tests, documentation and deployment follow.
+> **Status: Phase 11 of 14 (security).** E2E tests, documentation and deployment
+> follow.
 
 ## Stack
 
@@ -170,7 +170,7 @@ used in this project.
 8. ✅ Multilingual routing (/lo, /en) and public site shell
 9. ✅ Public website (home, about, services, projects, news, contact, quote)
 10. ✅ SEO (metadata, hreflang, sitemap, robots, JSON-LD) and performance
-11. Security hardening (CSP, rate limiting, audit)
+11. ✅ Security hardening (CSP, headers, audit, dependency review)
 12. Testing (unit, integration, E2E)
 13. Documentation (SETUP, DEPLOYMENT, DATABASE, API, SECURITY)
 14. Production deployment (Vercel and Docker)
