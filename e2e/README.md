@@ -12,12 +12,12 @@ npm run build && npm run start &         # or set E2E_BASE_URL to a running serv
 E2E_ADMIN_PASSWORD='…' E2E_DEMO_PASSWORD='…' npm run test:e2e
 ```
 
-| Variable                                                     | Default                 | Meaning                                                   |
-| ------------------------------------------------------------ | ----------------------- | --------------------------------------------------------- |
-| `E2E_BASE_URL`                                               | `http://localhost:3000` | Server to test. Without it, `npm run start` is launched.  |
-| `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`                     | `admin@example.com` / — | Super Administrator (`SEED_ADMIN_*`).                     |
-| `E2E_DEMO_PASSWORD`                                          | —                       | Password of the seeded demo users (`SEED_DEMO_PASSWORD`). |
-| `E2E_EDITOR_EMAIL`, `E2E_VIEWER_EMAIL`, `E2E_PROJECTS_EMAIL` | seeded demo users       | Other roles.                                              |
+| Variable                                                     | Default                 | Meaning                                                        |
+| ------------------------------------------------------------ | ----------------------- | -------------------------------------------------------------- |
+| `E2E_BASE_URL`                                               | `http://localhost:3000` | Server to test. Without it, `npm run start` is launched.       |
+| `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`                     | `admin@example.com` / — | Super Administrator (`SEED_ADMIN_*`).                          |
+| `E2E_DEMO_PASSWORD`                                          | —                       | Password of the seeded demo users (`SEED_DEMO_USER_PASSWORD`). |
+| `E2E_EDITOR_EMAIL`, `E2E_VIEWER_EMAIL`, `E2E_PROJECTS_EMAIL` | seeded demo users       | Other roles.                                                   |
 
 Run against a **test database** seeded with sample data (`SEED_SAMPLE_DATA=true`),
 never production: the tests create, publish and delete content and submit forms.

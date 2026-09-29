@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { defaultLocale, type Locale } from "@/config/i18n";
 import { db } from "@/lib/db/client";
+import { getServerEnv } from "@/lib/env/server";
 import { pickTranslation } from "@/server/services/content/translations";
 import { getSetting } from "@/server/services/settings";
 
@@ -53,7 +54,8 @@ export const getSiteShell = cache(async (locale: Locale) => {
       title: localized(seo?.defaultTitle, locale),
       description: localized(seo?.defaultDescription, locale),
       ogImage,
-      googleAnalyticsId: seo?.googleAnalyticsId ?? null,
+      // Settings win; GOOGLE_ANALYTICS_ID (validated as G-XXXX) covers a fresh install.
+      googleAnalyticsId: seo?.googleAnalyticsId ?? getServerEnv().GOOGLE_ANALYTICS_ID ?? null,
       googleSiteVerification: seo?.googleSiteVerification ?? null,
     },
     contact: {
