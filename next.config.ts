@@ -42,6 +42,8 @@ function storageImagePatterns(): RemotePattern[] {
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Docker builds a self-contained server (.next/standalone); Vercel doesn't need it.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   typedRoutes: true,
   experimental: {
     // The site and the CMS are separate root layouts, so unmatched URLs need a

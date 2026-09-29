@@ -1,0 +1,23 @@
+# Keep secrets, local state and build output out of the build context.
+.env
+.env.*
+!.env.example
+.git
+node_modules
+.next
+out
+storage
+src/generated
+coverage
+test-results
+playwright-report
+blob-report
+tests
+e2e
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store
+.vscode
+.idea
+deploy/nginx/certs
+backups
