@@ -120,6 +120,7 @@ export function translationsSchema<S extends Shape>(shape: S, requiredKey: keyof
         Locale,
         z.ZodOptional<typeof entry>
       >,
+      { error: "required" },
     )
     .superRefine((value, ctx) => {
       for (const locale of locales) {
