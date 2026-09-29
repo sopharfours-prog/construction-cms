@@ -4,8 +4,8 @@ Corporate website and content management system for a construction company.
 Public site in Lao and English, with a role-based admin CMS for projects,
 services, news, media, inquiries and quote requests.
 
-> **Status: Phase 10 of 14 (SEO).** Security hardening, E2E tests, documentation
-> and deployment follow.
+> **Status: Phase 10 of 14, plus users, roles, website settings and About content.**
+> Security hardening, E2E tests, documentation and deployment follow.
 
 ## Stack
 
