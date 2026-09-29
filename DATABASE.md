@@ -1,6 +1,6 @@
 # Database
 
-PostgreSQL 15+ (tested on 16) with Prisma ORM 7.
+PostgreSQL 16+ (tested on 16 and 17) with Prisma ORM 7.
 
 - Schema: [`prisma/schema.prisma`](prisma/schema.prisma)
 - Migrations: [`prisma/migrations/`](prisma/migrations)
@@ -137,7 +137,7 @@ never overwrites role assignments an administrator changed, except that
 `SUPER_ADMIN` is always re-granted every permission.
 
 `users.session_version` is incremented on password change, disable or role
-change; sessions carrying an older version are rejected (Phase 3).
+change; sessions carrying an older version are rejected.
 
 ## Constraints enforced by PostgreSQL
 
@@ -198,8 +198,33 @@ The seed is idempotent. It creates sample records only when their slug is
 free and never changes an existing admin's password. With sample data off,
 neutral default settings are created instead.
 
-No images are seeded. Upload real photos through the Media Library (Phase 6);
+No images are seeded. Upload real photos through the Media Library;
 pages show a neutral placeholder until then.
+
+## Migrations
+
+| Migration                               | Adds                                                                                                                                                              |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `20260927101130_init`                   | All tables, indexes and the custom constraints listed above (slug formats, lower-case emails, date order, single default language, append-only audit log trigger) |
+| `20260927102744_add_rate_limits`        | `rate_limits`: counters for sign-in, password reset, uploads and public forms                                                                                     |
+| `20260928051831_add_reference_counters` | `reference_counters`: per-year counters for quote references (`Q-2026-000042`); continues after any existing numbers                                              |
+
+### Reference numbers
+
+Quote requests get a human-readable reference from `nextReferenceNumber()`
+(`src/server/services/reference-number.ts`): one atomic
+`INSERT … ON CONFLICT DO UPDATE … RETURNING` on `reference_counters`, so
+concurrent requests always get different numbers (verified with 50 parallel
+requests). Numbering restarts every year (Asia/Vientiane). A failed insert
+can leave a gap in the sequence; references are never reused. The seed uses
+the same counter, so real requests never collide with sample ones.
+
+### Languages
+
+`languages.enabled` controls which languages the public site shows (Website
+Settings → Languages). The main language (`lo`) is always on, because every
+translatable record must have it. Adding a language also needs code: see
+"Adding a language" in the README.
 
 ## Backups
 
@@ -210,4 +235,6 @@ pg_dump --format=custom --no-owner "$DATABASE_URL" > backup-$(date +%F).dump
 pg_restore --clean --no-owner --dbname "$DATABASE_URL" backup-2026-09-27.dump
 ```
 
-Back up object storage separately: the database stores only file keys.
+Back up object storage separately: the database stores only file keys. Keep
+both backups from the same time, so restored rows point at existing files.
+See [DEPLOYMENT.md](DEPLOYMENT.md#backups) for the Docker setup.

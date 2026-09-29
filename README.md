@@ -1,175 +1,158 @@
 # Construction CMS
 
-Corporate website and content management system for a construction company.
-Public site in Lao and English, with a role-based admin CMS for projects,
-services, news, media, inquiries and quote requests.
+Company website and content management system for a construction contractor,
+in **Lao** and **English**. The public site presents services, projects and
+news and collects enquiries and quote requests; the CMS lets staff manage all
+of it with role-based permissions and a full audit trail.
 
-> **Status: Phase 12 of 14 (tests).** Documentation and deployment follow.
+> **Status:** feature-complete (phases 1–13 of 14). Production deployment
+> files (Docker, Nginx, MinIO, Vercel) are added in phase 14.
+
+## Features
+
+**Public website** (`/lo`, `/en`): home page, about (team, certifications,
+history), services, projects with search and filters and a full-screen
+gallery, news with categories and tags, contact form and quote requests with
+attachments, privacy and terms pages. Fully responsive, accessible, cached
+(ISR) and SEO-ready: canonical and hreflang links, Open Graph, sitemap,
+robots.txt and JSON-LD (GeneralContractor, BreadcrumbList, NewsArticle,
+Project).
+
+**CMS** (`/admin`): dashboard, projects (bilingual content, gallery,
+specifications, publish workflow), services (ordering), news (draft,
+published, scheduled, archived), pages, About-page content, categories and
+tags, media library (S3/R2/MinIO or local disk, drag-and-drop, folders,
+replace, usage tracking), inquiries and quote requests (status, assignment,
+notes, email replies, private attachments), users, roles and permissions,
+website settings (company, contact, social, SEO, brand colours, languages)
+and an append-only audit log. The CMS itself is available in Lao and English.
 
 ## Stack
 
-| Layer      | Choice                                                          |
-| ---------- | --------------------------------------------------------------- |
-| Framework  | Next.js 16 (App Router, Turbopack), React 19, TypeScript strict |
-| Styling    | Tailwind CSS v4, shadcn/ui (Radix), Lucide icons                |
-| Validation | Zod                                                             |
-| Database   | PostgreSQL + Prisma 7 (driver adapter `pg`)                     |
-| Auth       | Auth.js with RBAC (Phase 3)                                     |
-| Storage    | S3-compatible adapter: AWS S3, Cloudflare R2, MinIO (Phase 6)   |
+| Area       | Choice                                                                                    |
+| ---------- | ----------------------------------------------------------------------------------------- |
+| Framework  | Next.js 16 (App Router, Server Components, Server Actions), React 19, TypeScript (strict) |
+| UI         | Tailwind CSS 4, shadcn/ui (Radix), Lucide icons, Tiptap editor                            |
+| Data       | PostgreSQL 16+ with Prisma 7 (`@prisma/adapter-pg`)                                       |
+| Auth       | Auth.js v5 (credentials), Argon2id password hashing, database-backed RBAC                 |
+| Files      | S3-compatible storage (AWS S3, Cloudflare R2, MinIO) or local disk; sharp for images      |
+| Validation | Zod 4, shared by forms, server actions and the REST API                                   |
+| Tests      | Vitest (unit, integration against PostgreSQL), Playwright (end-to-end)                    |
 
-## Requirements
+## Quick start
 
-- Node.js 20.9 or newer (22 LTS recommended, see `.nvmrc`)
-- npm 10+
-- PostgreSQL 15+ (or Docker, using the included `docker-compose.yml`)
-
-## Getting started
+Requires **Node.js 20.9+** (22 LTS recommended) and **PostgreSQL 16+**
+(Docker is easiest). Full details and troubleshooting: [SETUP.md](SETUP.md).
 
 ```bash
-npm install                  # also generates the Prisma client
-cp .env.example .env         # set DATABASE_URL and SEED_ADMIN_PASSWORD
-docker compose up -d         # local PostgreSQL (skip if you have your own)
-npm run db:deploy            # apply migrations
-npm run db:seed              # roles, admin account, sample content
-npm run dev                  # http://localhost:3000
+# 1. Install
+npm install                      # also generates the Prisma client
+
+# 2. Environment
+cp .env.example .env
+#    set AUTH_SECRET (openssl rand -base64 32) and SEED_ADMIN_PASSWORD (12+ chars)
+
+# 3. Database
+docker compose up -d             # PostgreSQL on 127.0.0.1:5432
+npm run db:deploy                # apply migrations
+npm run db:seed                  # roles, permissions, admin, sample content
+
+# 4. Develop
+npm run dev                      # http://localhost:3000 → /lo, CMS at /admin
 ```
 
-Check the app can reach the database at
-[http://localhost:3000/api/health](http://localhost:3000/api/health).
+Sign in at `/admin/login` with `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`,
+then remove the password from `.env`.
 
-Database details, conventions and the migration workflow are in
-[DATABASE.md](DATABASE.md).
+### Build and run in production mode
 
-In development, the design system reference is at
-[http://localhost:3000/styleguide](http://localhost:3000/styleguide). It returns 404 in production.
+```bash
+npm run build                    # no database needed at build time
+npm run db:deploy                # on the target database, before starting
+npm run start                    # serves on port 3000
+```
+
+Deployment on Docker (with Nginx and MinIO) or Vercel: [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Scripts
 
-| Command                    | What it does                                        |
-| -------------------------- | --------------------------------------------------- |
-| `npm run dev`              | Development server                                  |
-| `npm run build`            | Production build                                    |
-| `npm run start`            | Serve the production build                          |
-| `npm run typecheck`        | Generate route types, then run `tsc --noEmit`       |
-| `npm run lint`             | ESLint, failing on any warning                      |
-| `npm run lint:fix`         | ESLint with autofix                                 |
-| `npm run format`           | Format everything with Prettier                     |
-| `npm run format:check`     | Verify formatting without writing                   |
-| `npm run check`            | typecheck + lint + format:check (run before commit) |
-| `npm run db:*`             | Database scripts, see [DATABASE.md](DATABASE.md)    |
-| `npm test`                 | Unit tests (Vitest)                                 |
-| `npm run test:integration` | Integration tests against PostgreSQL                |
+| Script                                          | What it does                                                                                    |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `dev`, `build`, `start`                         | Next.js development server, production build, production server                                 |
+| `check`                                         | Everything CI runs: typecheck, lint, format check, unit tests                                   |
+| `typecheck`, `lint`, `format`, `format:check`   | Individual checks                                                                               |
+| `test`                                          | Unit tests (no database)                                                                        |
+| `test:integration`                              | Integration tests against `DATABASE_URL` (use a test database)                                  |
+| `test:e2e`                                      | Playwright end-to-end tests against a running, seeded instance ([e2e/README.md](e2e/README.md)) |
+| `db:deploy`                                     | Apply pending migrations (production and CI)                                                    |
+| `db:migrate`                                    | Create a migration from schema changes (development)                                            |
+| `db:seed`, `db:status`, `db:reset`, `db:studio` | Seed, migration status, reset (development only), Prisma Studio                                 |
 
-## Environment variables
+## Documentation
 
-All variables are documented in [`.env.example`](.env.example), grouped by the
-phase that starts using them. `.env` and `.env.*` are git-ignored; only the
-template is committed.
+| Document                       | Contents                                                                   |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| [SETUP.md](SETUP.md)           | Local development in detail, environment variables, troubleshooting        |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Docker (Nginx, PostgreSQL, MinIO) and Vercel deployment, backups, upgrades |
+| [DATABASE.md](DATABASE.md)     | Schema design, multilingual model, constraints, migrations, seed           |
+| [API.md](API.md)               | REST endpoints, authentication, errors, examples                           |
+| [SECURITY.md](SECURITY.md)     | Security measures, known risks, operator checklist, reporting              |
+| [e2e/README.md](e2e/README.md) | Running the Playwright tests                                               |
 
-`NEXT_PUBLIC_SITE_URL` is required for production builds. The build fails
-with a message naming the missing variable rather than shipping wrong
-canonical URLs.
+## Roles
+
+| Role                | Can                                                                  |
+| ------------------- | -------------------------------------------------------------------- |
+| Super Administrator | Everything, including users, roles, settings and the audit log       |
+| Administrator       | Projects, services, news, pages, media, inquiries and quote requests |
+| Content Editor      | News, pages, About content, categories and tags, media               |
+| Project Editor      | Projects and their galleries, media (upload, edit)                   |
+| Viewer              | Read-only access to the CMS                                          |
+
+Permissions are data (`projects.update`, `news.publish`, …): roles can be
+edited and custom roles created under **Users → Roles and permissions**.
+Nobody can grant permissions they don't hold themselves.
 
 ## Project structure
 
 ```text
 src/
-├── app/                  Routes (App Router)
-│   ├── (dev)/styleguide  Design system reference, development only
-│   ├── fonts.ts          Self-hosted variable fonts
-│   └── globals.css       Design tokens (brand → semantic → Tailwind)
-├── assets/fonts/         Archivo + Noto Sans Lao (SIL OFL)
+├── app/
+│   ├── [locale]/          public site (root layout per language, ISR)
+│   ├── admin/             CMS (its own root layout; (auth) and (protected) groups)
+│   ├── api/               REST endpoints, Auth.js, health check
+│   ├── media/             local-disk file serving (STORAGE_DRIVER=local)
+│   ├── sitemap.ts, robots.ts, global-not-found.tsx
 ├── components/
-│   ├── ui/               shadcn/ui primitives (owned source, edit freely)
-│   ├── shared/           Used by both the public site and the CMS
-│   ├── public/           Public website components
-│   └── admin/            CMS components
-├── config/               Brand defaults, locales, technical site config
-├── hooks/                Client hooks
-├── i18n/messages/        UI strings per locale (content lives in the DB)
-├── lib/
-│   ├── env/              Zod-validated environment (public / server-only)
-│   ├── theme/            Brand token validation
-│   └── auth, db, storage, validation, permissions   (later phases)
-├── server/               actions / services / repositories (business logic)
-└── types/
+│   ├── ui/                shadcn/ui primitives
+│   ├── admin/             CMS screens and form building blocks
+│   ├── site/              public site components and forms
+│   └── shared/            used by both (root document, icons, theme)
+├── config/                technical configuration (languages, navigation, brand defaults)
+├── i18n/                  public and CMS dictionaries (lo, en), locale routing
+├── lib/                   framework-independent code: auth, validation, storage,
+│                          security (CSP, tokens), SEO, content (rich text, slugs)
+├── server/
+│   ├── actions/           server actions: authorize → validate → service → revalidate
+│   ├── services/          business logic and database access (no UI, no auth runtime)
+│   ├── public/            read-only queries for the public site
+│   └── api/               helpers for REST route handlers
+├── proxy.ts               language redirects, CMS session gate, CSP
+└── generated/prisma/      generated client (not committed)
+prisma/                    schema, migrations, seed
+tests/unit, tests/integration, e2e/
 ```
 
-Prisma lives at the repository root in `prisma/` (the location Prisma's
-tooling expects) rather than under `src/`. The generated client is written to
-`src/generated/prisma` (git-ignored).
+Every mutation follows the same path: permission check on the server, Zod
+validation, service call (inside a transaction with its audit log entry),
+cache revalidation. The UI hides what a user can't do, but never enforces it.
 
-## Authentication
+## Adding a language
 
-The CMS lives at `/admin` (sign-in page: `/admin/login`). Accounts are created
-by administrators; there is no public sign-up.
+Content tables are already per-language. Add the code to `src/config/i18n.ts`,
+translate `src/i18n/messages` and `src/i18n/admin`, and insert a row in the
+`languages` table. The main language (Lao) is required for all content.
 
-- **Passwords:** Argon2id, 12–128 characters. Reset links are single-use,
-  expire after 30 minutes, are stored only as SHA-256 hashes, and revoke every
-  existing session when used. Without SMTP configured, development prints the
-  email (with the link) to the server console.
-- **Sessions:** JWT in an HttpOnly cookie. 12 hours, or 30 days with
-  "Keep me signed in". The token carries no permissions: every request
-  re-checks the account (active, not deleted, session version) and loads the
-  role's permissions from the database, so disabling a user or changing a role
-  takes effect on the next click.
-- **Brute force:** 5 failed attempts per email lock sign-in for 15 minutes
-  (same response whether or not the account exists); 20 attempts per IP per
-  15 minutes. Counters live in PostgreSQL, so limits hold across serverless
-  instances and containers.
-- **Authorization helpers** (`src/lib/auth/session.ts`): `requireUser()` and
-  `requirePermission("projects.update")` for pages, `authorize()` for server
-  actions, `authorizeRequest()` for route handlers (401/403 JSON).
-- **Audit:** sign-ins, failures (with reason), sign-outs and password resets
-  are recorded in `audit_logs`.
+## License
 
-Required in production: `AUTH_SECRET` (32+ characters) and `AUTH_URL` (the
-public URL). Use `AUTH_URL`, not `NEXTAUTH_URL`: without it Auth.js rejects the
-host and every sign-in fails.
-
-## Testing
-
-```bash
-npm test                   # unit tests
-npm run test:integration   # against the database in DATABASE_URL (use a disposable one)
-```
-
-## Design system
-
-- **Colour** is defined in three layers in `globals.css`: brand variables →
-  semantic tokens (shadcn contract) → Tailwind utilities. Components only use
-  semantic tokens, so changing the four brand colours re-themes everything.
-- Brand colours are injected by `<BrandStyle />` after strict hex validation,
-  so values from an admin setting cannot inject CSS or HTML.
-- Dark mode derives its primary colour from the brand colour automatically.
-- **Type:** Archivo (with width axis for condensed display headings, via the
-  `type-display` and `type-heading` utilities) and Noto Sans Lao in one font
-  stack, so mixed Lao/English text needs no extra markup.
-- Fonts are bundled, not fetched from Google at build time, so builds work
-  offline, in Docker and on private servers.
-
-## Adding shadcn/ui components
-
-```bash
-npx shadcn@latest add <component>
-```
-
-`components.json` is configured for the `new-york` style with the aliases
-used in this project.
-
-## Roadmap
-
-1. ✅ Project initialization
-2. ✅ Database (Prisma, schema, migrations, seed)
-3. ✅ Authentication and RBAC
-4. ✅ Admin layout, dashboard and audit logs
-5. ✅ CMS core (projects, services, news, pages, categories, tags)
-6. ✅ Media library and object storage
-7. ✅ Contact inquiries and quote requests
-8. ✅ Multilingual routing (/lo, /en) and public site shell
-9. ✅ Public website (home, about, services, projects, news, contact, quote)
-10. ✅ SEO (metadata, hreflang, sitemap, robots, JSON-LD) and performance
-11. ✅ Security hardening (CSP, headers, audit, dependency review)
-12. ✅ Tests (unit, integration, Playwright E2E)
-13. Documentation (SETUP, DEPLOYMENT, DATABASE, API, SECURITY)
-14. Production deployment (Vercel and Docker)
+Proprietary. All rights reserved by the owner of this repository.
