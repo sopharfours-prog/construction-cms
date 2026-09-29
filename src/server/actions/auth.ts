@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { signIn, signOut } from "@/lib/auth/auth";
+import { writeAuditLog } from "@/server/services/audit";
+import { getCurrentUser } from "@/lib/auth/session";
 import { safeAdminCallbackUrl } from "@/lib/security/redirect";
 import { getRequestInfo } from "@/lib/security/request-info";
 import {
@@ -81,6 +83,18 @@ export async function loginAction(
 }
 
 export async function logoutAction(): Promise<void> {
+  // Recorded here rather than in the Auth.js signOut event, which has no
+  // request and so could not store the IP address and browser.
+  const user = await getCurrentUser();
+  if (user) {
+    await writeAuditLog({
+      action: "LOGOUT",
+      entity: "User",
+      entityId: user.id,
+      userId: user.id,
+      request: getRequestInfo(await headers()),
+    });
+  }
   await signOut({ redirectTo: "/admin/login" });
 }
 

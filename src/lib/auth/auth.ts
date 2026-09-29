@@ -2,9 +2,7 @@ import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 import { getRequestInfo } from "@/lib/security/request-info";
-import { decodeToken } from "@/lib/auth/token-subject";
 import { loginSchema } from "@/lib/validation/auth";
-import { writeAuditLog } from "@/server/services/audit";
 import { authenticateWithPassword } from "@/server/services/auth/login";
 
 import { authConfig } from "./auth.config";
@@ -38,11 +36,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  events: {
-    async signOut(message) {
-      const userId = "token" in message ? decodeToken(message.token) : null;
-      if (userId)
-        await writeAuditLog({ action: "LOGOUT", entity: "User", entityId: userId, userId });
-    },
-  },
 });
