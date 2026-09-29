@@ -4,6 +4,12 @@ import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server
 import { isLocale } from "@/config/i18n";
 import { authConfig } from "@/lib/auth/auth.config";
 import { SITE_LOCALE_COOKIE, localizedPath, pickLocale } from "@/i18n/routing";
+import { adminCsp, createNonce, publicSiteCsp, storageOriginFromEnv } from "@/lib/security/csp";
+
+const cspOptions = {
+  storageOrigin: storageOriginFromEnv(process.env),
+  isDev: process.env.NODE_ENV !== "production",
+};
 
 const { auth } = NextAuth(authConfig);
 
@@ -29,7 +35,15 @@ const adminProxy = auth((request) => {
     return NextResponse.redirect(new URL("/admin", request.nextUrl.origin));
   }
 
-  const response = NextResponse.next();
+  // Per-request nonce: Next.js reads it from the request's CSP header and adds
+  // it to its own scripts, so only those scripts may run.
+  const nonce = createNonce();
+  const csp = adminCsp(nonce, cspOptions);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy", csp);
   // The CMS is never indexed and never cached by shared caches.
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   response.headers.set("Cache-Control", "private, no-store");
@@ -45,7 +59,11 @@ const adminProxy = auth((request) => {
 function localeRedirect(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const first = pathname.split("/")[1] ?? "";
-  if (isLocale(first)) return NextResponse.next();
+  if (isLocale(first)) {
+    const response = NextResponse.next();
+    response.headers.set("Content-Security-Policy", publicSiteCsp(cspOptions));
+    return response;
+  }
 
   const locale = pickLocale(
     request.cookies.get(SITE_LOCALE_COOKIE)?.value,

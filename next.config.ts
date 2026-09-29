@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import type { RemotePattern } from "next/dist/shared/lib/image-config";
 
+import { apiCsp } from "./src/lib/security/csp";
+
 const isProduction = process.env.NODE_ENV === "production";
 
 /**
@@ -18,7 +20,7 @@ const securityHeaders = [
   },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   ...(isProduction
-    ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }]
+    ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]
     : []),
 ];
 
@@ -54,7 +56,13 @@ const nextConfig: NextConfig = {
     dangerouslyAllowLocalIP: process.env.IMAGES_ALLOW_LOCAL_IP === "true",
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // JSON APIs and served files never run scripts or get framed. Pages get
+      // their CSP from src/proxy.ts (nonce for the CMS).
+      { source: "/api/:path*", headers: [{ key: "Content-Security-Policy", value: apiCsp }] },
+      { source: "/media/:path*", headers: [{ key: "Content-Security-Policy", value: apiCsp }] },
+    ];
   },
 };
 
