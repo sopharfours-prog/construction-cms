@@ -22,7 +22,8 @@
     "db:studio": "prisma studio",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1141.0",
@@ -53,6 +54,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.4",
     "@types/nodemailer": "^8.0.2",
@@ -74,5 +76,10 @@
   },
   "engines": {
     "node": ">=20.9.0"
+  },
+  "overrides": {
+    "next-auth": {
+      "nodemailer": "$nodemailer"
+    }
   }
 }
