@@ -18,8 +18,8 @@ const serverEnvSchema = z.object({
     .min(1, "DATABASE_URL is required")
     .refine((url) => /^postgres(ql)?:\/\//.test(url), "Expected a postgresql:// connection URL"),
   AUTH_SECRET: z
-    .string({ error: "AUTH_SECRET is required (generate with: npx auth secret)" })
-    .min(32, "AUTH_SECRET must be at least 32 characters"),
+    .string({ error: "missing. Generate one with: openssl rand -base64 32" })
+    .min(32, "must be at least 32 characters. Generate one with: openssl rand -base64 32"),
   SMTP_HOST: z
     .string()
     .optional()
@@ -55,10 +55,12 @@ export function getServerEnv(): ServerEnv {
 
   const result = serverEnvSchema.safeParse(process.env);
   if (!result.success) {
-    // Report variable names only; never echo values, which may be secrets.
-    const fields = result.error.issues.map((issue) => issue.path.join(".")).join(", ");
+    // Names and rule descriptions only; values are never echoed (they may be secrets).
+    const problems = result.error.issues
+      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+      .join("; ");
     throw new Error(
-      `Invalid server environment variables: ${fields}. See .env.example for the expected format.`,
+      `Invalid server environment variables: ${problems}. Set them in .env (see .env.example) and restart the server.`,
     );
   }
 
