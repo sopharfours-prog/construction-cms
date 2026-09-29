@@ -27,7 +27,9 @@ export function SiteHeader({
   locale,
   shell,
   t,
+  languages,
 }: {
+  languages: Locale[];
   locale: Locale;
   shell: SiteShell;
   t: Messages["site"];
@@ -71,12 +73,26 @@ export function SiteHeader({
         </nav>
 
         <div className="ml-auto flex items-center gap-3 lg:ml-0">
-          <LanguageSwitcher current={locale} labels={t} className="hidden sm:flex" />
+          {languages.length > 1 ? (
+            <LanguageSwitcher
+              current={locale}
+              available={languages}
+              labels={t}
+              className="hidden sm:flex"
+            />
+          ) : null}
           <Button asChild className="hidden md:inline-flex">
             <Link href={cta.href as Route}>{cta.label}</Link>
           </Button>
           <MobileMenu items={items} cta={cta} title={shell.name} labels={t}>
-            <LanguageSwitcher current={locale} labels={t} className="sm:hidden" />
+            {languages.length > 1 ? (
+              <LanguageSwitcher
+                current={locale}
+                available={languages}
+                labels={t}
+                className="sm:hidden"
+              />
+            ) : null}
           </MobileMenu>
         </div>
       </div>

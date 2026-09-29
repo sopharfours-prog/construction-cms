@@ -18,6 +18,8 @@ export type SeoImage =
 
 type PageSeo = {
   locale: Locale;
+  /** Languages enabled on the site (hreflang alternates); defaults to all. */
+  enabledLocales?: readonly Locale[];
   /** Path without the language prefix, e.g. "/projects/bridge". */
   path: string;
   title: string;
@@ -39,6 +41,7 @@ type PageSeo = {
  */
 export function pageMetadata({
   locale,
+  enabledLocales = locales,
   path,
   title,
   description,
@@ -52,7 +55,7 @@ export function pageMetadata({
 }: PageSeo): Metadata {
   const url = absoluteUrl(localizedPath(locale, path));
   const languages = Object.fromEntries([
-    ...locales.map((l) => [localeConfig[l].htmlLang, absoluteUrl(localizedPath(l, path))]),
+    ...enabledLocales.map((l) => [localeConfig[l].htmlLang, absoluteUrl(localizedPath(l, path))]),
     ["x-default", absoluteUrl(localizedPath(defaultLocale, path))],
   ]);
   const images = image?.url
@@ -78,7 +81,9 @@ export function pageMetadata({
       description: desc,
       siteName,
       locale: localeConfig[locale].ogLocale,
-      alternateLocale: locales.filter((l) => l !== locale).map((l) => localeConfig[l].ogLocale),
+      alternateLocale: enabledLocales
+        .filter((l) => l !== locale)
+        .map((l) => localeConfig[l].ogLocale),
       images,
       ...(type === "article"
         ? { publishedTime: publishedTime?.toISOString(), modifiedTime: modifiedTime?.toISOString() }

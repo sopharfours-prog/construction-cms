@@ -10,6 +10,7 @@ import { localizedPath } from "@/i18n/routing";
 import { getSiteShell } from "@/server/public/site";
 import { getSetting } from "@/server/services/settings";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { getEnabledLocales } from "@/server/services/site-settings";
 
 export async function generateMetadata({
   params,
@@ -19,6 +20,7 @@ export async function generateMetadata({
   const t = getMessages(locale).public.contact;
   const shell = await getSiteShell(locale);
   return pageMetadata({
+    enabledLocales: await getEnabledLocales(),
     locale,
     path: "/contact",
     title: t.title,

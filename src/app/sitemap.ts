@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
 
-import { defaultLocale, localeConfig, locales } from "@/config/i18n";
+import { defaultLocale, localeConfig } from "@/config/i18n";
 import { localizedPath } from "@/i18n/routing";
 import { db } from "@/lib/db/client";
 import { absoluteUrl, isIndexingAllowed } from "@/lib/seo/metadata";
+import { getEnabledLocales } from "@/server/services/site-settings";
 
 /** Built per request (cached by the CDN), so `next build` needs no database. */
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ type Entry = {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!isIndexingAllowed()) return [];
   const now = new Date();
+  const locales = await getEnabledLocales();
   const [projects, services, news, pages] = await Promise.all([
     db.project.findMany({
       where: { deletedAt: null, status: "PUBLISHED" },

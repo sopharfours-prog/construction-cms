@@ -8,6 +8,7 @@ import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { listPublicServices } from "@/server/public/content";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { getEnabledLocales } from "@/server/services/site-settings";
 import { getSiteShell } from "@/server/public/site";
 
 export async function generateMetadata({
@@ -18,6 +19,7 @@ export async function generateMetadata({
   const t = getMessages(locale).public.quote;
   const shell = await getSiteShell(locale);
   return pageMetadata({
+    enabledLocales: await getEnabledLocales(),
     locale,
     path: "/request-quote",
     title: t.title,

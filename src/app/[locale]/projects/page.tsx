@@ -15,6 +15,7 @@ import {
   publicProjectFilters,
 } from "@/server/public/content";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { getEnabledLocales } from "@/server/services/site-settings";
 import { getSiteShell } from "@/server/public/site";
 
 /** Filters and pages come from the URL, so each request renders fresh (not a cached copy). */
@@ -28,6 +29,7 @@ export async function generateMetadata({
   const t = getMessages(locale).public.projects;
   const shell = await getSiteShell(locale);
   return pageMetadata({
+    enabledLocales: await getEnabledLocales(),
     locale,
     path: "/projects",
     title: t.title,

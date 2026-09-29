@@ -14,6 +14,7 @@ import { localizedPath } from "@/i18n/routing";
 import { formatNumber } from "@/lib/format";
 import { getHomeData } from "@/server/public/content";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { getEnabledLocales } from "@/server/services/site-settings";
 import { getSiteShell } from "@/server/public/site";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]">): Promise<Metadata> {
@@ -22,6 +23,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]">): Prom
   const shell = await getSiteShell(locale);
   const title = shell.seo.title || shell.tagline || shell.name;
   return pageMetadata({
+    enabledLocales: await getEnabledLocales(),
     locale,
     path: "/",
     title,

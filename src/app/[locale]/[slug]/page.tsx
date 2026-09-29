@@ -9,6 +9,7 @@ import { localizedPath } from "@/i18n/routing";
 import { formatDate } from "@/lib/format";
 import { getPublicPage } from "@/server/public/content";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { getEnabledLocales } from "@/server/services/site-settings";
 import { getSiteShell } from "@/server/public/site";
 
 type Props = PageProps<"/[locale]/[slug]">;
@@ -25,6 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [page, shell] = await Promise.all([getPublicPage(slug, locale), getSiteShell(locale)]);
   if (!page) return {};
   return pageMetadata({
+    enabledLocales: await getEnabledLocales(),
     locale,
     path: `/${page.slug}`,
     title: page.seo.title || page.title,

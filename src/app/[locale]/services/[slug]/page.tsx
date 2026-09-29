@@ -12,6 +12,7 @@ import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { getPublicService, listPublicServices } from "@/server/public/content";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { getEnabledLocales } from "@/server/services/site-settings";
 import { getSiteShell } from "@/server/public/site";
 import { breadcrumbLd, JsonLd } from "@/lib/seo/json-ld";
 
@@ -28,6 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [s, shell] = await Promise.all([getPublicService(slug, locale), getSiteShell(locale)]);
   if (!s) return {};
   return pageMetadata({
+    enabledLocales: await getEnabledLocales(),
     locale,
     path: `/services/${s.slug}`,
     title: s.seo.title || s.title,

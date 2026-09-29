@@ -14,6 +14,7 @@ import { localizedPath } from "@/i18n/routing";
 import { formatDate } from "@/lib/format";
 import { getAboutData } from "@/server/public/content";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { getEnabledLocales } from "@/server/services/site-settings";
 import { getSiteShell } from "@/server/public/site";
 
 export async function generateMetadata({
@@ -23,6 +24,7 @@ export async function generateMetadata({
   if (!isLocale(locale)) return {};
   const [{ page }, shell] = await Promise.all([getAboutData(locale), getSiteShell(locale)]);
   return pageMetadata({
+    enabledLocales: await getEnabledLocales(),
     locale,
     path: "/about",
     title: page?.seo.title || page?.title || getMessages(locale).public.about.title,

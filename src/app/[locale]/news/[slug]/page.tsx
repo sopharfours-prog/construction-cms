@@ -13,6 +13,7 @@ import { localizedPath } from "@/i18n/routing";
 import { formatDate } from "@/lib/format";
 import { getPublicNews } from "@/server/public/content";
 import { pageMetadata } from "@/lib/seo/metadata";
+import { getEnabledLocales } from "@/server/services/site-settings";
 import { articleLd, breadcrumbLd, JsonLd } from "@/lib/seo/json-ld";
 import { getSiteShell } from "@/server/public/site";
 import { absoluteUrl } from "@/lib/seo/metadata";
@@ -30,6 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [news, shell] = await Promise.all([getPublicNews(slug, locale), getSiteShell(locale)]);
   if (!news) return {};
   return pageMetadata({
+    enabledLocales: await getEnabledLocales(),
     locale,
     path: `/news/${news.slug}`,
     title: news.seo.title || news.title,

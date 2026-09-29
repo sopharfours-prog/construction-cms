@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
 
-import { localeConfig, locales, type Locale } from "@/config/i18n";
+import { localeConfig, type Locale } from "@/config/i18n";
 import { fmt } from "@/i18n/format";
 import { SITE_LOCALE_COOKIE, switchLocalePath } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
@@ -12,9 +12,11 @@ import { cn } from "@/lib/utils";
 /** "LO | EN": plain links to the same page in the other language; the choice is remembered. */
 export function LanguageSwitcher({
   current,
+  available,
   labels,
   className,
 }: {
+  available: readonly Locale[];
   current: Locale;
   labels: { language: string; switchTo: string };
   className?: string;
@@ -25,7 +27,7 @@ export function LanguageSwitcher({
       aria-label={labels.language}
       className={cn("flex items-center text-sm font-semibold", className)}
     >
-      {locales.map((locale, index) => (
+      {available.map((locale, index) => (
         <span key={locale} className="flex items-center">
           {index > 0 ? (
             <span aria-hidden="true" className="px-1.5 opacity-40">
