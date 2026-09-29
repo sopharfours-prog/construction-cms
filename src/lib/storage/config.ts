@@ -44,6 +44,12 @@ export function getStorageConfig(): StorageConfig {
     const fields = parsed.error.issues.map((i) => i.path.join(".")).join(", ");
     throw new Error(`Storage is misconfigured. Check these environment variables: ${fields}`);
   }
+  // Serverless file systems are temporary: uploads would vanish without an error.
+  if (parsed.data.STORAGE_DRIVER === "local" && process.env.VERCEL) {
+    throw new Error(
+      "STORAGE_DRIVER=local can't be used on Vercel: files would be lost. Use STORAGE_DRIVER=s3 (S3 or Cloudflare R2).",
+    );
+  }
   cached = parsed.data;
   return cached;
 }
