@@ -5,8 +5,8 @@ in **Lao** and **English**. The public site presents services, projects and
 news and collects enquiries and quote requests; the CMS lets staff manage all
 of it with role-based permissions and a full audit trail.
 
-> **Status:** feature-complete (phases 1–13 of 14). Production deployment
-> files (Docker, Nginx, MinIO, Vercel) are added in phase 14.
+> **Status:** complete (phases 1–14): public site, CMS, tests, documentation,
+> Docker and Vercel deployment.
 
 ## Features
 
