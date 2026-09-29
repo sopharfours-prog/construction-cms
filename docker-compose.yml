@@ -1,7 +1,8 @@
 # Local development services.
 #   docker compose up -d        start PostgreSQL
 #   docker compose down         stop (data is kept in the named volume)
-# Object storage (MinIO) is added in Phase 6; the production stack in Phase 14.
+# Files are stored on disk (./storage) by default. The production stack
+# (Nginx, PostgreSQL, MinIO) is docker-compose.prod.yml; see DEPLOYMENT.md.
 name: construction-cms
 
 services:

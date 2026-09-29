@@ -58,3 +58,11 @@ next-env.d.ts
 
 # prisma generated client (rebuilt by postinstall / prisma generate)
 /src/generated
+
+# deployment secrets and certificates
+.env.production
+/deploy/certbot/conf/*
+!/deploy/certbot/conf/.gitkeep
+/deploy/certbot/www/*
+!/deploy/certbot/www/.gitkeep
+/backups

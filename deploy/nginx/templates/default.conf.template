@@ -1,0 +1,81 @@
+# Rendered by the nginx image at start-up (envsubst: ${DOMAIN}, ${S3_BUCKET}).
+
+upstream app {
+  server app:3000;
+  keepalive 32;
+}
+
+# HTTP: Let's Encrypt challenges, everything else to HTTPS.
+server {
+  listen 80;
+  listen [::]:80;
+  server_name ${DOMAIN};
+
+  location /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+  }
+
+  location / {
+    return 301 https://$host$request_uri;
+  }
+}
+
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  http2 on;
+  server_name ${DOMAIN};
+
+  ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+  ssl_session_cache shared:SSL:10m;
+  ssl_session_timeout 1d;
+  ssl_session_tickets off;
+
+  server_tokens off;
+
+  # Largest upload: videos of 100 MB (media library) plus form overhead.
+  client_max_body_size 110m;
+
+  gzip on;
+  gzip_vary on;
+  gzip_proxied any;
+  gzip_types text/css application/javascript application/json image/svg+xml text/plain application/xml;
+
+  # Public files from MinIO. Customer attachments (private/) are never served
+  # here; the app streams them only to authorised staff.
+  location /files/private/ {
+    return 404;
+  }
+
+  location /files/ {
+    limit_except GET HEAD {
+      deny all;
+    }
+    proxy_pass http://minio:9000/${S3_BUCKET}/;
+    proxy_set_header Host minio:9000;
+    proxy_hide_header x-amz-request-id;
+    proxy_hide_header x-amz-id-2;
+    proxy_hide_header Server;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'" always;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+  }
+
+  location / {
+    proxy_pass http://app;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $http_host;
+    # Overwrite, never append: the app trusts the left-most value as the client
+    # IP (rate limits, audit log), so a client-supplied header must not survive.
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $http_host;
+    proxy_read_timeout 120s;
+    proxy_send_timeout 120s;
+  }
+}
