@@ -43,14 +43,19 @@ export default async function PagesPage() {
         title={p.title}
         description={p.description}
         actions={
-          hasPermission(user, "pages.create") ? (
-            <Button asChild>
-              <Link href="/admin/pages/new">
-                <PlusIcon aria-hidden="true" />
-                {p.new}
-              </Link>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link href="/admin/pages/about-content">{t.about.open}</Link>
             </Button>
-          ) : null
+            {hasPermission(user, "pages.create") ? (
+              <Button asChild>
+                <Link href="/admin/pages/new">
+                  <PlusIcon aria-hidden="true" />
+                  {p.new}
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         }
       />
       {pages.length === 0 ? (
