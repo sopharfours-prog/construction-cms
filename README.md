@@ -23,7 +23,10 @@ specifications, publish workflow), services (ordering), news (draft,
 published, scheduled, archived), pages, About-page content, categories and
 tags, media library (S3/R2/MinIO or local disk, drag-and-drop, folders,
 replace, usage tracking), inquiries and quote requests (status, assignment,
-notes, email replies, private attachments), users, roles and permissions,
+notes, email replies, private attachments), live chat with website visitors
+(chat bubble on every public page, answered from a CMS inbox), users, roles and permissions
+(with optional staff account requests that an administrator approves, and
+a self-service account page for changing one's password),
 website settings (company, contact, social, SEO, brand colours, languages)
 and an append-only audit log. The CMS itself is available in Lao and English.
 
@@ -101,13 +104,13 @@ Deployment on Docker (with Nginx and MinIO) or Vercel: [DEPLOYMENT.md](DEPLOYMEN
 
 ## Roles
 
-| Role                | Can                                                                  |
-| ------------------- | -------------------------------------------------------------------- |
-| Super Administrator | Everything, including users, roles, settings and the audit log       |
-| Administrator       | Projects, services, news, pages, media, inquiries and quote requests |
-| Content Editor      | News, pages, About content, categories and tags, media               |
-| Project Editor      | Projects and their galleries, media (upload, edit)                   |
-| Viewer              | Read-only access to the CMS                                          |
+| Role                | Can                                                                             |
+| ------------------- | ------------------------------------------------------------------------------- |
+| Super Administrator | Everything, including users, roles, settings and the audit log                  |
+| Administrator       | Projects, services, news, pages, media, inquiries, quote requests and live chat |
+| Content Editor      | News, pages, About content, categories and tags, media                          |
+| Project Editor      | Projects and their galleries, media (upload, edit)                              |
+| Viewer              | Read-only access to the CMS                                                     |
 
 Permissions are data (`projects.update`, `news.publish`, …): roles can be
 edited and custom roles created under **Users → Roles and permissions**.
