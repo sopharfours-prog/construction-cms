@@ -15,15 +15,14 @@ mkdir -p "${DEST}"
 
 # shellcheck disable=SC1091
 set -a; . ./.env.production; set +a
-BUCKET="${S3_BUCKET:-cms}"
 
 echo "[$(date -u +%FT%TZ)] database → ${DEST}/database.dump"
 ${COMPOSE} exec -T postgres pg_dump --format=custom --no-owner \
   -U "${POSTGRES_USER:-cms}" -d "${POSTGRES_DB:-construction_cms}" > "${DEST}/database.dump"
 
 echo "[$(date -u +%FT%TZ)] files → ${DEST}/files"
-${COMPOSE} run --rm --no-deps -T -v "$(pwd)/${DEST}:/backup" --entrypoint /bin/sh minio-init -c \
-  "mc alias set local http://minio:9000 \"\$MINIO_ROOT_USER\" \"\$MINIO_ROOT_PASSWORD\" >/dev/null && mc mirror --quiet local/${BUCKET} /backup/files"
+${COMPOSE} run --rm --no-deps -T -v "$(pwd)/${DEST}:/backup" storage-init \
+  npx tsx scripts/storage.ts export /backup/files
 
 find backups -mindepth 1 -maxdepth 1 -type d -mtime "+${KEEP_DAYS}" -exec rm -rf {} +
 echo "[$(date -u +%FT%TZ)] done: $(du -sh "${DEST}" | cut -f1)"

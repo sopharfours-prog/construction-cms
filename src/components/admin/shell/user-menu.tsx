@@ -1,7 +1,7 @@
 "use client";
 
-import { ExternalLinkIcon, LogOutIcon, MoonIcon, SunIcon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { ChevronRightIcon, CircleUserIcon, ExternalLinkIcon, LogOutIcon } from "lucide-react";
+import Link from "next/link";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -17,7 +16,12 @@ import { logoutAction } from "@/server/actions/auth";
 
 type UserMenuProps = {
   user: { name: string; email: string; roleName: string; avatarUrl: string | null };
-  labels: { account: string; signOut: string; toDark: string; toLight: string; viewSite: string };
+  labels: {
+    account: string;
+    myAccount: string;
+    signOut: string;
+    viewSite: string;
+  };
 };
 
 function initials(name: string) {
@@ -30,9 +34,6 @@ function initials(name: string) {
 }
 
 export function UserMenu({ user, labels }: UserMenuProps) {
-  const { resolvedTheme, setTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -53,15 +54,26 @@ export function UserMenu({ user, labels }: UserMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel className="font-normal">
-          <p className="truncate font-semibold">{user.name}</p>
-          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{user.roleName}</p>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => setTheme(isDark ? "light" : "dark")}>
-          {isDark ? <SunIcon aria-hidden="true" /> : <MoonIcon aria-hidden="true" />}
-          {isDark ? labels.toLight : labels.toDark}
+        {/* Who you are, and the way to your profile. */}
+        <DropdownMenuItem asChild className="items-start gap-3 py-2">
+          <Link href="/admin/account" aria-label={`${labels.myAccount}: ${user.name}`}>
+            <Avatar className="size-9">
+              {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt="" /> : null}
+              <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">
+                {initials(user.name)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="grid min-w-0 flex-1">
+              <span className="truncate font-semibold">{user.name}</span>
+              <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+              <span className="text-xs text-muted-foreground">{user.roleName}</span>
+              <span className="mt-1 flex items-center gap-1 text-xs font-medium text-primary">
+                <CircleUserIcon className="size-3.5" aria-hidden="true" />
+                {labels.myAccount}
+                <ChevronRightIcon className="size-3.5" aria-hidden="true" />
+              </span>
+            </span>
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <a href="/" target="_blank" rel="noopener">

@@ -2,9 +2,11 @@ import "server-only";
 
 import { checkUpload, cleanOriginalName } from "@/lib/files/sniff";
 import { ApiError } from "@/lib/api/errors";
+import type { RequestInfo } from "@/lib/security/request-info";
 import { getStorage } from "@/lib/storage";
 import { createStorageKey, type StorageArea } from "@/lib/storage/keys";
 import { ATTACHMENT_LIMITS } from "@/lib/validation/requests";
+import { consumeRateLimit, rateLimitKey, rateLimits } from "@/server/services/rate-limit";
 
 export type IncomingFile = { name: string; buffer: Buffer };
 export type StoredAttachment = {
@@ -20,11 +22,19 @@ const FORM_OVERHEAD = 256 * 1024;
  * Parse a public multipart submission: body size checked before buffering,
  * attachment count limited, every file validated by content.
  */
-export async function readPublicSubmission(request: Request, maxFiles: number) {
+export async function readPublicSubmission(request: Request, maxFiles: number, info: RequestInfo) {
   const declared = Number(request.headers.get("content-length"));
   if (!declared) throw new ApiError("validation", "lengthRequired");
   if (declared > ATTACHMENT_LIMITS.totalBytes + FORM_OVERHEAD)
     throw new ApiError("tooLarge", "fileTooLarge");
+  // Up to 25 MB is buffered below, before the form token and per-submission
+  // limits can be checked: cap how often one connection can make us do that.
+  const rate = await consumeRateLimit(
+    rateLimitKey("public-form-request:ip", info.ipAddress ?? "unknown"),
+    rateLimits.publicFormRequestsPerIp,
+  );
+  if (!rate.allowed)
+    throw new ApiError("rateLimited", undefined, { "Retry-After": String(rate.retryAfterSeconds) });
 
   const form = await request.formData().catch(() => {
     throw new ApiError("validation", "invalidForm");

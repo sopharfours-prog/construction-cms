@@ -40,7 +40,7 @@ export function UserSecurity({
 }: {
   userId: string;
   userName: string;
-  status: "ACTIVE" | "DISABLED";
+  status: "ACTIVE" | "DISABLED" | "PENDING";
   can: { update: boolean; delete: boolean };
   labels: Labels;
 }) {
@@ -88,7 +88,7 @@ export function UserSecurity({
           </div>
           <form
             ref={form}
-            action={password.formAction}
+            onSubmit={password.onSubmit}
             noValidate
             className="grid gap-3 border-t pt-5"
           >
@@ -134,7 +134,8 @@ export function UserSecurity({
         </>
       ) : null}
       <div className="flex flex-wrap gap-2 border-t pt-5">
-        {can.update ? (
+        {/* A pending request is approved in the form above (a role must be chosen), not toggled here. */}
+        {can.update && status !== "PENDING" ? (
           <Button
             variant="outline"
             size="sm"
@@ -176,7 +177,7 @@ export function UserSecurity({
             <AlertDialogCancel disabled={pending}>{c.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={pending}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              variant="destructive"
               onClick={(e) => {
                 e.preventDefault();
                 run(

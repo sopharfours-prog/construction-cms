@@ -88,7 +88,7 @@ export function ContactForm({ locale, f }: { locale: Locale; f: F }) {
     <form onSubmit={form.onSubmit} noValidate className="relative grid gap-5" aria-busy={sending}>
       <Honeypot />
       <ErrorBanner status={form.status} hasFieldErrors={Object.keys(e).length > 0} f={f} />
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <TextField
           name="name"
           label={f.name}
@@ -178,7 +178,7 @@ export function QuoteForm({
     <form onSubmit={form.onSubmit} noValidate className="relative grid gap-5" aria-busy={sending}>
       <Honeypot />
       <ErrorBanner status={form.status} hasFieldErrors={Object.keys(e).length > 0} f={f} />
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <TextField
           name="customerName"
           label={f.customerName}
@@ -214,7 +214,7 @@ export function QuoteForm({
           maxLength={40}
         />
       </div>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <SelectField
           name="serviceId"
           label={f.service}

@@ -27,7 +27,7 @@ export function safeAdminCallbackUrl(value: unknown): Route {
 
   const path = url.pathname;
   const isAdmin = path === DEFAULT_ADMIN_PATH || path.startsWith(`${DEFAULT_ADMIN_PATH}/`);
-  const isAuthPage = /^\/admin\/(login|forgot-password|reset-password)(\/|$)/.test(path);
+  const isAuthPage = /^\/admin\/(login|register|forgot-password|reset-password)(\/|$)/.test(path);
   if (!isAdmin || isAuthPage) return DEFAULT_ADMIN_PATH;
 
   // Validated above: a same-origin path under /admin.

@@ -44,7 +44,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
   return (
     <>
       <AdminPageHeader title={m.title} description={m.description} />
-      <div className="grid gap-6 lg:grid-cols-[14rem_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[14rem_1fr]">
         <FolderPanel
           folders={folders.map((f) => ({ id: f.id, name: f.name, count: f._count.media }))}
           current={filters.folder}

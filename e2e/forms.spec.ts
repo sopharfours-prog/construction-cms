@@ -7,7 +7,9 @@ test.describe("public forms", () => {
   test("contact form: client validation, then a successful message", async ({ page }) => {
     await page.goto("/en/contact");
     await page.getByRole("button", { name: "Send message" }).click();
-    await expect(page.getByRole("alert")).toContainText("Please correct the highlighted fields.");
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Please correct the highlighted fields." }),
+    ).toBeVisible();
     await expect(page.getByLabel(/Full name/)).toBeFocused();
 
     await page.getByLabel(/Full name/).fill(`E2E Visitor ${runId}`);

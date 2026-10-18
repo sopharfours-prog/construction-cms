@@ -2,6 +2,7 @@
 
 import { AuthError, CredentialsSignin } from "next-auth";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 
 import { signIn, signOut } from "@/lib/auth/auth";
@@ -12,10 +13,12 @@ import { getRequestInfo } from "@/lib/security/request-info";
 import {
   forgotPasswordSchema,
   loginSchema,
+  registerSchema,
   resetPasswordSchema,
   type AuthErrorKey,
 } from "@/lib/validation/auth";
 import { requestPasswordReset, resetPassword } from "@/server/services/auth/password-reset";
+import { notifyAdministrators, requestStaffAccount } from "@/server/services/auth/registration";
 
 /**
  * Form state returned to the client. Messages are keys into the admin
@@ -23,10 +26,18 @@ import { requestPasswordReset, resetPassword } from "@/server/services/auth/pass
  */
 export type AuthFormState = {
   status: "idle" | "error" | "success";
-  error?: AuthErrorKey | "invalidCredentials" | "rateLimited" | "unexpected";
-  fieldErrors?: Partial<Record<"email" | "password" | "confirmPassword", AuthErrorKey>>;
-  /** Echoed back so the email field keeps its value after an error. */
+  error?:
+    | AuthErrorKey
+    | "invalidCredentials"
+    | "rateLimited"
+    | "unexpected"
+    | "registrationClosed"
+    | "registrationRetry"
+    | "registrationRateLimited";
+  fieldErrors?: Partial<Record<"name" | "email" | "password" | "confirmPassword", AuthErrorKey>>;
+  /** Echoed back so the fields keep their value after an error. */
   email?: string;
+  name?: string;
 };
 
 function fieldErrorsFrom(issues: { path: PropertyKey[]; message: string }[]) {
@@ -34,7 +45,10 @@ function fieldErrorsFrom(issues: { path: PropertyKey[]; message: string }[]) {
   for (const issue of issues) {
     const field = issue.path[0];
     if (
-      (field === "email" || field === "password" || field === "confirmPassword") &&
+      (field === "name" ||
+        field === "email" ||
+        field === "password" ||
+        field === "confirmPassword") &&
       !fieldErrors[field]
     ) {
       fieldErrors[field] = issue.message as AuthErrorKey;
@@ -82,7 +96,12 @@ export async function loginAction(
   redirect(safeAdminCallbackUrl(formData.get("callbackUrl")));
 }
 
-export async function logoutAction(): Promise<void> {
+/**
+ * Sign out. Used as a form action; an optional `redirectTo` field (a path on
+ * this site) returns the person to the page they were on.
+ */
+export async function logoutAction(form?: FormData): Promise<void> {
+  const redirectTo = form instanceof FormData ? form.get("redirectTo") : null;
   // Recorded here rather than in the Auth.js signOut event, which has no
   // request and so could not store the IP address and browser.
   const user = await getCurrentUser();
@@ -95,7 +114,12 @@ export async function logoutAction(): Promise<void> {
       request: getRequestInfo(await headers()),
     });
   }
-  await signOut({ redirectTo: "/admin/login" });
+  // Only a path on this site: never an open redirect.
+  const target =
+    typeof redirectTo === "string" && /^\/(?![/\\])[^\s]*$/.test(redirectTo)
+      ? redirectTo
+      : "/admin/login";
+  await signOut({ redirectTo: target });
 }
 
 export async function forgotPasswordAction(
@@ -108,8 +132,10 @@ export async function forgotPasswordAction(
     return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error.issues), email: rawEmail };
   }
 
-  await requestPasswordReset(parsed.data.email, getRequestInfo(await headers()));
-  // Same answer whether or not the account exists.
+  // Same answer, and the same response time, whether or not the account exists:
+  // looking up the account and sending the email happen after the response.
+  const request = getRequestInfo(await headers());
+  after(() => requestPasswordReset(parsed.data.email, request));
   return { status: "success" };
 }
 
@@ -135,4 +161,44 @@ export async function resetPasswordAction(
     getRequestInfo(await headers()),
   );
   return result.ok ? { status: "success" } : { status: "error", error: "tokenInvalid" };
+}
+
+/** Public: ask for a staff account. An administrator approves it before it can sign in. */
+export async function registerAction(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const name = String(formData.get("name") ?? "");
+  const email = String(formData.get("email") ?? "");
+  const parsed = registerSchema.safeParse({
+    name,
+    email,
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error.issues), name, email };
+  }
+
+  const result = await requestStaffAccount(
+    parsed.data,
+    {
+      website: String(formData.get("website") ?? ""),
+      formToken: String(formData.get("formToken") ?? ""),
+    },
+    getRequestInfo(await headers()),
+  );
+  if (result.ok) {
+    const created = result.created;
+    if (created) after(() => notifyAdministrators(created));
+    return { status: "success" };
+  }
+  const error = (
+    {
+      closed: "registrationClosed",
+      retry: "registrationRetry",
+      rateLimited: "registrationRateLimited",
+    } as const
+  )[result.reason];
+  return { status: "error", error, name, email };
 }

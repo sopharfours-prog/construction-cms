@@ -47,7 +47,7 @@ export default async function ContactPage({ params }: PageProps<"/[locale]/conta
         crumbLabel={t.public.breadcrumb}
         crumbs={[{ href: localizedPath(locale, "/"), label: t.site.nav.home }, { label: c.title }]}
       />
-      <div className="container-site grid gap-12 py-14 lg:grid-cols-[22rem_1fr] lg:gap-16 lg:py-20">
+      <div className="container-site grid grid-cols-1 gap-12 py-14 lg:grid-cols-[22rem_1fr] lg:gap-16 lg:py-20">
         <aside aria-labelledby="contact-details">
           <h2 id="contact-details" className="mb-6 text-2xl type-heading">
             {c.details}

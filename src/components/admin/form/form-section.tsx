@@ -8,7 +8,9 @@ export function FormSection({ title, children }: { title: ReactNode; children: R
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-5">{children}</CardContent>
+      {/* A size container: fields lay out by the card's width, which in a
+          side column stays narrow however wide the window is. */}
+      <CardContent className="@container grid gap-5">{children}</CardContent>
     </Card>
   );
 }

@@ -22,8 +22,8 @@ export type CurrentUser = {
 /**
  * The signed-in user, re-validated against the database on every request
  * (deduplicated within a request by React cache()). Returns null when there is
- * no session, or when the account was disabled, deleted, locked or had its
- * session version bumped (password change, "sign out everywhere").
+ * no session, or when the account was disabled, deleted or had its session
+ * version bumped (password change, "sign out everywhere").
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const session = await auth();
@@ -38,7 +38,6 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       email: true,
       preferredLocale: true,
       sessionVersion: true,
-      lockedUntil: true,
       avatar: { select: { url: true } },
       role: {
         select: {
@@ -50,8 +49,10 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     },
   });
 
+  // A temporary lock (failed sign-in attempts) blocks new sign-ins only. Ending
+  // sessions here would let anyone who knows a staff email sign that person out
+  // at will by typing wrong passwords.
   if (!user || user.sessionVersion !== session.sessionVersion) return null;
-  if (user.lockedUntil && user.lockedUntil > new Date()) return null;
 
   return {
     id: user.id,

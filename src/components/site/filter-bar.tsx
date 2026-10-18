@@ -32,7 +32,7 @@ export function FilterBar({
       method="get"
       action={action}
       role="search"
-      className="grid gap-3 border bg-card p-4 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto] md:items-end"
+      className="grid grid-cols-1 gap-3 border bg-card p-4 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto] md:items-end"
     >
       {search ? (
         <label className="grid gap-1.5 text-sm font-medium">

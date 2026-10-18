@@ -12,7 +12,7 @@ import { assertImages } from "@/server/services/media/media";
 
 /** Media fields inside settings groups: must point at live images. */
 const imageFields: Partial<Record<SettingsKey, string[]>> = {
-  general: ["logoMediaId", "faviconMediaId"],
+  general: ["logoMediaId", "faviconMediaId", "heroImageMediaId", "aboutImageMediaId"],
   seo: ["ogImageMediaId"],
 };
 

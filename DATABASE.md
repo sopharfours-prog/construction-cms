@@ -90,7 +90,9 @@ the storage key, public URL and metadata (MIME type, size, dimensions, blur
 placeholder).
 
 **Customer communication:** `inquiries` (+ `inquiry_attachments`,
-`inquiry_notes`), `quote_requests` (+ `quote_attachments`, `quote_notes`).
+`inquiry_notes`), `quote_requests` (+ `quote_attachments`, `quote_notes`),
+`chat_conversations` (+ `chat_messages`) for the website's live chat; a
+visitor is identified by the SHA-256 of a random token held in their cookie.
 Customer attachments are **not** media-library files: they are private, stored
 under a non-public prefix and only downloadable through a permission-checked
 route.
@@ -203,11 +205,15 @@ pages show a neutral placeholder until then.
 
 ## Migrations
 
-| Migration                               | Adds                                                                                                                                                              |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `20260927101130_init`                   | All tables, indexes and the custom constraints listed above (slug formats, lower-case emails, date order, single default language, append-only audit log trigger) |
-| `20260927102744_add_rate_limits`        | `rate_limits`: counters for sign-in, password reset, uploads and public forms                                                                                     |
-| `20260928051831_add_reference_counters` | `reference_counters`: per-year counters for quote references (`Q-2026-000042`); continues after any existing numbers                                              |
+| Migration                                         | Adds                                                                                                                                                                              |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `20260927101130_init`                             | All tables, indexes and the custom constraints listed above (slug formats, lower-case emails, date order, single default language, append-only audit log trigger)                 |
+| `20260927102744_add_rate_limits`                  | `rate_limits`: counters for sign-in, password reset, uploads and public forms                                                                                                     |
+| `20260928051831_add_reference_counters`           | `reference_counters`: per-year counters for quote references (`Q-2026-000042`); continues after any existing numbers                                                              |
+| `20261012090000_add_pending_user_status`          | `PENDING` user status for staff account requests from the registration form                                                                                                       |
+| `20261017052944_add_live_chat`                    | `chat_conversations` and `chat_messages` for the website's live chat; message length `CHECK` (1–2,000 characters)                                                                 |
+| `20261018022356_add_read_state_for_notifications` | Read state for the notification bell: `inquiries.staff_read_at`, `quote_requests.staff_read_at`, `users.request_seen_at` (an item leaves the bell once someone on staff opens it) |
+| `20261018030000_backfill_read_state`              | Marks existing requests that were already handled (status no longer `NEW`) as read                                                                                                |
 
 ### Reference numbers
 

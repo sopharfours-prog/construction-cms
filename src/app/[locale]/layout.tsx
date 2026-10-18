@@ -3,6 +3,7 @@ import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
 
 import { RootDocument } from "@/components/shared/root-document";
+import { ChatWidget } from "@/components/site/chat-widget";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { defaultLocale, isLocale, localeConfig } from "@/config/i18n";
@@ -41,6 +42,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Pr
     title: { default: shell.seo.title || name, template: `%s | ${name}` },
     description: shell.seo.description || shell.description || undefined,
     applicationName: name,
+    icons: { icon: [shell.favicon] },
     robots: indexable
       ? {
           index: true,
@@ -103,6 +105,14 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[lo
         </main>
         <SiteFooter locale={locale} shell={shell} t={t.site} />
       </div>
+      {shell.chatOpen ? (
+        <ChatWidget
+          locale={locale}
+          companyName={shell.name || siteConfig.fallbackName}
+          labels={t.public.chat}
+          errors={t.public.form.errors}
+        />
+      ) : null}
       <JsonLd
         data={organizationLd({
           name: shell.name || siteConfig.fallbackName,

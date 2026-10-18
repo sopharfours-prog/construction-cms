@@ -28,33 +28,36 @@ export function SlugInput({
   const ref = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex gap-2">
-      <Input
-        ref={ref}
-        id={id}
-        name={name}
-        defaultValue={defaultValue}
-        required
-        maxLength={200}
-        pattern="[a-z0-9]+(-[a-z0-9]+)*"
-        spellCheck={false}
-        autoCapitalize="none"
-        className="font-mono"
-        {...a11y}
-      />
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => {
-          const source = ref.current?.form?.elements.namedItem(sourceName);
-          const value = source instanceof HTMLInputElement ? source.value : "";
-          const slug = slugify(value);
-          if (slug && ref.current) ref.current.value = slug;
-        }}
-      >
-        <WandSparklesIcon aria-hidden="true" />
-        <span className="hidden sm:inline">{generateLabel}</span>
-      </Button>
+    <div className="@container">
+      <div className="flex gap-2">
+        <Input
+          ref={ref}
+          id={id}
+          name={name}
+          defaultValue={defaultValue}
+          required
+          maxLength={200}
+          pattern="[a-z0-9]+(-[a-z0-9]+)*"
+          spellCheck={false}
+          autoCapitalize="none"
+          className="min-w-0 flex-1 font-mono"
+          {...a11y}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            const source = ref.current?.form?.elements.namedItem(sourceName);
+            const value = source instanceof HTMLInputElement ? source.value : "";
+            const slug = slugify(value);
+            if (slug && ref.current) ref.current.value = slug;
+          }}
+        >
+          <WandSparklesIcon aria-hidden="true" />
+          {/* Icon only in narrow cards, but always named for screen readers. */}
+          <span className="sr-only @sm:not-sr-only">{generateLabel}</span>
+        </Button>
+      </div>
     </div>
   );
 }

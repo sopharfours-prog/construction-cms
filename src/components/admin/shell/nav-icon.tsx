@@ -1,10 +1,12 @@
 import {
+  CircleUserIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
   HardHatIcon,
   ImagesIcon,
   InboxIcon,
   LayoutDashboardIcon,
+  MessagesSquareIcon,
   NewspaperIcon,
   ScrollTextIcon,
   SettingsIcon,
@@ -31,6 +33,8 @@ const icons: Record<AdminNavIcon, LucideIcon> = {
   settings: SettingsIcon,
   tags: TagsIcon,
   shield: ShieldIcon,
+  "circle-user": CircleUserIcon,
+  "messages-square": MessagesSquareIcon,
 };
 
 export function NavIcon({ name, className }: { name: AdminNavIcon; className?: string }) {

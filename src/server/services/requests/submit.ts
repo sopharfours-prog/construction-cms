@@ -18,6 +18,11 @@ export type SubmitResult = { id: string; reference?: string; locale: Locale; spa
 /**
  * Spam checks shared by public forms. A filled honeypot is reported as
  * "spam" so the caller can answer with a normal-looking success.
+ *
+ * A bad form token is an error instead, never a silent "success": a real
+ * visitor gets one too (token request failed on a weak connection, page left
+ * open overnight, a retry right after a fresh token), and telling them their
+ * message was sent would lose it. The form fetches a new token and resends.
  */
 async function guard(
   input: { website?: string; formToken?: string; email: string },
@@ -25,8 +30,8 @@ async function guard(
 ): Promise<"ok" | "spam"> {
   if (input.website) return "spam";
   const token = checkFormToken(input.formToken, getServerEnv().AUTH_SECRET);
-  if (token === "invalid" || token === "tooFast") return "spam";
-  if (token === "expired") throw new ApiError("validation", "formExpired");
+  if (token === "tooFast") throw new ApiError("validation", "formTooFast");
+  if (token !== "ok") throw new ApiError("validation", "formExpired");
 
   const ip = await consumeRateLimit(
     rateLimitKey("public-form:ip", request.ipAddress ?? "unknown"),

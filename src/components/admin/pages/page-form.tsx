@@ -46,15 +46,15 @@ export function PageForm({ action, initial, canPublish, labels }: Props) {
   const isNew = !initial;
   const p = labels.pages;
   const c = labels.common;
-  const { formAction, pending, fieldErrors, errorFor } = useActionForm(action, labels, {
+  const { onSubmit, pending, fieldErrors, errorFor } = useActionForm(action, labels, {
     successMessage: isNew ? c.toast.created : c.toast.saved,
     onSuccess: (data) =>
       isNew && data ? router.push(`/admin/pages/${data.id}` as Route) : router.refresh(),
   });
 
   return (
-    <form action={formAction} noValidate className="grid gap-6">
-      <div className="grid gap-6 xl:grid-cols-3">
+    <form onSubmit={onSubmit} noValidate className="grid gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <FormSection title={p.sections.content}>
             <TranslationTabs fieldErrors={fieldErrors} labels={c}>

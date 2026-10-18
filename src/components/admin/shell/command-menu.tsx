@@ -68,7 +68,20 @@ export function CommandMenu({ nav, labels }: CommandMenuProps) {
         <CommandList>
           <CommandEmpty>{labels.searchEmpty}</CommandEmpty>
           {nav.map((group) => {
-            const items = group.items.filter((item) => item.href);
+            // Sub-menu entries (Settings › Contact, …) are listed too, so they can be searched.
+            const items = group.items.flatMap((item) =>
+              item.href
+                ? [
+                    item,
+                    ...(item.children ?? []).map((child) => ({
+                      ...item,
+                      key: `${item.key}-${child.key}`,
+                      label: `${item.label} › ${child.label}`,
+                      href: child.href,
+                    })),
+                  ]
+                : [],
+            );
             if (items.length === 0) return null;
             return (
               <CommandGroup key={group.key} heading={group.label}>

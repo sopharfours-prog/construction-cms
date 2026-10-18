@@ -14,11 +14,27 @@ const created: string[] = [];
 const createdRoles: string[] = [];
 let roles: Record<string, { id: string; permissions: PermissionKey[] }>;
 
+/** A throwaway account in the role, so the tests don't depend on the demo seed. */
+async function fixtureUser(roleKey: string) {
+  const user = await db.user.create({
+    data: {
+      name: `IT ${roleKey} ${tag}`,
+      email: `it-${tag}-${roleKey.toLowerCase()}@example.com`,
+      roleId: roles[roleKey]!.id,
+      status: "ACTIVE",
+    },
+  });
+  created.push(user.id);
+  return user;
+}
+
 async function actorFor(roleKey: string, id?: string, extra: PermissionKey[] = []) {
   const role = roles[roleKey]!;
   const user = id
     ? await db.user.findUniqueOrThrow({ where: { id } })
-    : await db.user.findFirstOrThrow({ where: { role: { key: roleKey }, deletedAt: null } });
+    : ((await db.user.findFirst({
+        where: { role: { key: roleKey }, deletedAt: null, status: "ACTIVE" },
+      })) ?? (await fixtureUser(roleKey)));
   const current: CurrentUser = {
     id: user.id,
     name: user.name,

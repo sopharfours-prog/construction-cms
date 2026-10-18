@@ -42,6 +42,23 @@ export const resetPasswordSchema = z
     error: "passwordMismatch",
   });
 
+/** Public request for a staff account. The applicant chooses the password they will sign in with once approved. */
+export const registerSchema = z
+  .object({
+    name: z
+      .string({ error: "nameRequired" })
+      .trim()
+      .min(2, { error: "nameRequired" })
+      .max(120, { error: "nameTooLong" }),
+    email,
+    password: newPassword,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ["confirmPassword"],
+    error: "passwordMismatch",
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type AuthErrorKey =
   | "emailRequired"
@@ -50,4 +67,6 @@ export type AuthErrorKey =
   | "passwordTooShort"
   | "passwordTooLong"
   | "passwordMismatch"
-  | "tokenInvalid";
+  | "tokenInvalid"
+  | "nameRequired"
+  | "nameTooLong";

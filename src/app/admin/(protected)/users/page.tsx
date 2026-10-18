@@ -1,9 +1,10 @@
-import { PlusIcon, ShieldIcon, UsersIcon } from "lucide-react";
+import { PlusIcon, ShieldIcon, UserCheckIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ListToolbar } from "@/components/admin/data/list-toolbar";
 import { PaginationNav } from "@/components/admin/data/pagination-nav";
+import { RowAction, RowCoverLink, rowLinkClass } from "@/components/admin/data/row-link";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -84,7 +85,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/admin/user
             label: u.columns.status,
             value: filters.status,
             allLabel: u.allStatuses,
-            options: (["ACTIVE", "DISABLED"] as const).map((s) => ({
+            options: (["PENDING", "ACTIVE", "DISABLED"] as const).map((s) => ({
               value: s,
               label: u.status[s],
             })),
@@ -111,12 +112,15 @@ export default async function UsersPage({ searchParams }: PageProps<"/admin/user
                     <TableHead>{u.columns.role}</TableHead>
                     <TableHead>{u.columns.status}</TableHead>
                     <TableHead className="hidden md:table-cell">{u.columns.lastLogin}</TableHead>
-                    <TableHead className="hidden pr-4 lg:table-cell">{u.columns.created}</TableHead>
+                    <TableHead className="hidden lg:table-cell">{u.columns.created}</TableHead>
+                    <TableHead className="pr-4">
+                      <span className="sr-only">{u.review}</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((row) => (
-                    <TableRow key={row.id}>
+                    <TableRow key={row.id} className={rowLinkClass}>
                       <TableCell className="pl-4">
                         <div className="flex items-center gap-3">
                           <Avatar className="size-8">
@@ -126,9 +130,11 @@ export default async function UsersPage({ searchParams }: PageProps<"/admin/user
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <Link
+                            {/* Pending requests have a Review button; other rows are reached by name. */}
+                            <RowCoverLink
                               href={`/admin/users/${row.id}`}
-                              className="block truncate font-medium hover:underline"
+                              accessible={row.status !== "PENDING"}
+                              className="block truncate font-medium"
                             >
                               {row.name}
                               {row.id === user.id ? (
@@ -136,15 +142,25 @@ export default async function UsersPage({ searchParams }: PageProps<"/admin/user
                                   ({u.you})
                                 </span>
                               ) : null}
-                            </Link>
+                            </RowCoverLink>
                             <p className="truncate text-xs text-muted-foreground">{row.email}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{row.role.name}</TableCell>
+                      <TableCell className="text-sm">
+                        {row.status === "PENDING" ? "—" : row.role.name}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          <Badge variant={row.status === "ACTIVE" ? "success" : "secondary"}>
+                          <Badge
+                            variant={
+                              row.status === "ACTIVE"
+                                ? "success"
+                                : row.status === "PENDING"
+                                  ? "warning"
+                                  : "secondary"
+                            }
+                          >
                             {u.status[row.status]}
                           </Badge>
                           {row.lockedUntil && row.lockedUntil > now ? (
@@ -155,8 +171,19 @@ export default async function UsersPage({ searchParams }: PageProps<"/admin/user
                       <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
                         {row.lastLoginAt ? formatRelative(row.lastLoginAt, locale) : u.never}
                       </TableCell>
-                      <TableCell className="hidden pr-4 text-sm text-muted-foreground lg:table-cell">
+                      <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                         {formatDate(row.createdAt, locale)}
+                      </TableCell>
+                      <TableCell className="pr-4 text-right">
+                        {row.status === "PENDING" ? (
+                          <RowAction
+                            href={`/admin/users/${row.id}`}
+                            label={u.review}
+                            name={`${u.review}: ${row.name} (${u.status.PENDING})`}
+                            icon={UserCheckIcon}
+                            urgent
+                          />
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))}

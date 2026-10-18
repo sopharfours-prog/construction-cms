@@ -20,6 +20,7 @@ const common = await import("@/server/services/requests/common");
 const request = { ipAddress: `203.0.113.${Math.floor(Math.random() * 200)}`, userAgent: "vitest" };
 const pdf = () => ({ name: "C:\\docs\\ແຜນ.pdf", buffer: Buffer.from("%PDF-1.4\n%test\n") });
 const created: { inquiries: string[]; quotes: string[] } = { inquiries: [], quotes: [] };
+const fixtureUsers: string[] = [];
 let ctx: { user: CurrentUser; request: typeof request };
 const files = async () =>
   (await readdir(localDir, { recursive: true, withFileTypes: true })).filter((d) => d.isFile())
@@ -44,6 +45,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.inquiry.deleteMany({ where: { id: { in: created.inquiries } } });
   await db.quoteRequest.deleteMany({ where: { id: { in: created.quotes } } });
+  await db.user.deleteMany({ where: { id: { in: fixtureUsers } } });
   await rm(localDir, { recursive: true, force: true });
   await db.$disconnect();
 });
@@ -86,6 +88,20 @@ describe("public submissions", () => {
     expect(result.spam).toBe(true);
     expect(await db.inquiry.count()).toBe(before);
     expect(await files()).toBe(1);
+  });
+
+  it("rejects a missing, stale or too-fresh form token instead of pretending success", async () => {
+    const before = await db.inquiry.count();
+    const secret = getServerEnv().AUTH_SECRET;
+    const send = (formToken: string | undefined) =>
+      submitInquiry({ ...inquiryInput("int-t@example.com"), formToken }, [], request);
+    await expect(send(undefined)).rejects.toMatchObject({ reason: "formExpired" });
+    await expect(send("123.bogus")).rejects.toMatchObject({ reason: "formExpired" });
+    await expect(send(createFormToken(secret, Date.now() - 25 * 3600_000))).rejects.toMatchObject({
+      reason: "formExpired",
+    });
+    await expect(send(createFormToken(secret))).rejects.toMatchObject({ reason: "formTooFast" });
+    expect(await db.inquiry.count()).toBe(before);
   });
 
   it("removes stored files when saving the request fails", async () => {
@@ -133,7 +149,16 @@ describe("staff workflow", () => {
   it("assigns only staff who can see the request", async () => {
     const id = created.inquiries[0]!;
     const staff = await common.listAssignableStaff("inquiry");
-    const viewer = await db.user.findFirstOrThrow({ where: { email: "projects@example.com" } }); // project editor: no inquiries.view
+    // A project editor cannot see inquiries, so must not be assignable.
+    const viewer = await db.user.create({
+      data: {
+        name: "IT project editor",
+        email: `it-projects-${Date.now()}@example.com`,
+        status: "ACTIVE",
+        role: { connect: { key: "PROJECT_EDITOR" } },
+      },
+    });
+    fixtureUsers.push(viewer.id);
     expect(staff.some((s) => s.id === viewer.id)).toBe(false);
     await expect(common.assignRequest("inquiry", id, viewer.id, ctx)).rejects.toMatchObject({
       messageKey: "assigneeInvalid",

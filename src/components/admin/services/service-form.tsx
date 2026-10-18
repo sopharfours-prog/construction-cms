@@ -62,15 +62,15 @@ export function ServiceForm({ action, initial, canPublish, labels }: Props) {
   const s = labels.services;
   const c = labels.common;
   const [icon, setIcon] = useState(initial?.icon ?? serviceIcons[0]);
-  const { formAction, pending, fieldErrors, errorFor } = useActionForm(action, labels, {
+  const { onSubmit, pending, fieldErrors, errorFor } = useActionForm(action, labels, {
     successMessage: isNew ? c.toast.created : c.toast.saved,
     onSuccess: (data) =>
       isNew && data ? router.push(`/admin/services/${data.id}` as Route) : router.refresh(),
   });
 
   return (
-    <form action={formAction} noValidate className="grid gap-6">
-      <div className="grid gap-6 xl:grid-cols-3">
+    <form onSubmit={onSubmit} noValidate className="grid gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <FormSection title={s.sections.content}>
             <TranslationTabs fieldErrors={fieldErrors} labels={c}>

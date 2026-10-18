@@ -123,7 +123,7 @@ export function RowActions({
               <AlertDialogCancel disabled={pending}>{labels.cancel}</AlertDialogCancel>
               <AlertDialogAction
                 disabled={pending}
-                className="bg-destructive text-white hover:bg-destructive/90"
+                variant="destructive"
                 onClick={(event) => {
                   event.preventDefault();
                   run(onDelete, labels.toast.deleted);

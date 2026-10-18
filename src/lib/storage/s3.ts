@@ -41,15 +41,24 @@ export function createS3Adapter(config: S3Config): StorageAdapter {
         }),
       );
     },
-    async get(key) {
+    async get(key, rangeHeader) {
       try {
         const result = await client.send(
-          new GetObjectCommand({ Bucket: config.S3_BUCKET, Key: key }),
+          new GetObjectCommand({
+            Bucket: config.S3_BUCKET,
+            Key: key,
+            Range: rangeHeader ?? undefined,
+          }),
         );
         if (!result.Body) return null;
+        const size = result.ContentLength ?? 0;
+        // "bytes 0-499/1234" when the server honoured the Range.
+        const part = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(result.ContentRange ?? "");
         return {
           body: result.Body.transformToWebStream() as ReadableStream<Uint8Array>,
-          size: result.ContentLength ?? 0,
+          size,
+          totalSize: part ? Number(part[3]) : size,
+          ...(part ? { range: { start: Number(part[1]), end: Number(part[2]) } } : {}),
           contentType: result.ContentType ?? "application/octet-stream",
         };
       } catch (error) {

@@ -7,6 +7,16 @@ export const en = {
   },
   site: {
     skipToContent: "Skip to main content",
+    account: {
+      menu: "Account",
+      loginRegister: "Log in / Register",
+      login: "Log in",
+      register: "Register",
+      staffHint: "For company staff",
+      profile: "My profile",
+      cms: "Content management",
+      signOut: "Sign out",
+    },
     nav: {
       home: "Home",
       about: "About us",
@@ -15,6 +25,7 @@ export const en = {
       news: "News",
       contact: "Contact",
       requestQuote: "Request a quote",
+      register: "Staff sign-up",
     },
     mainNav: "Main navigation",
     openMenu: "Open menu",
@@ -157,6 +168,40 @@ export const en = {
       formTitle: "Project details",
       steps: ["We review your request", "An engineer contacts you", "You receive a proposal"],
     },
+    chat: {
+      open: "Chat with us",
+      close: "Close chat",
+      title: "Chat with us",
+      subtitle: "We reply as soon as we can during working hours.",
+      intro:
+        "Leave your name and an email or phone number, so we can get back to you even if you leave this page.",
+      name: "Your name",
+      contact: "Email or phone",
+      message: "Message",
+      start: "Start chat",
+      starting: "Sending…",
+      placeholder: "Type a message…",
+      send: "Send",
+      you: "You",
+      waiting: "Thanks! Someone from our team will reply here shortly.",
+      closedNotice: "This chat was closed by our team. Send a message to reopen it.",
+      unread: "new replies",
+      privacy: "We use your details only to answer you.",
+    },
+    siteSearch: {
+      title: "Search",
+      intro: "Projects, services, news and pages on this website.",
+      open: "Search",
+      label: "Search the website",
+      placeholder: "Search projects, services, news…",
+      submit: "Search",
+      results: "{count} results for “{q}”",
+      resultsOne: "1 result for “{q}”",
+      none: "Nothing found for “{q}”.",
+      noneHint: "Try a shorter or different word, or browse:",
+      start: "Type what you're looking for: a project name, a place or a service.",
+      types: { project: "Projects", service: "Services", news: "News", page: "Pages" },
+    },
     form: {
       name: "Full name",
       customerName: "Name or company contact",
@@ -198,6 +243,7 @@ export const en = {
         tooShort: "Please add a little more detail.",
         emailInvalid: "Enter an email address such as name@company.la",
         phoneInvalid: "Enter a phone number, for example +856 20 5555 1234.",
+        contactInvalid: "Enter an email address or a phone number.",
         amountInvalid: "Enter a number, for example 1,500,000,000.",
         dateInvalid: "Enter a valid date.",
         invalid: "Please check this field.",
@@ -217,6 +263,12 @@ export const en = {
   },
   auth: {
     cmsName: "Content management",
+    shell: {
+      backToSite: "Back to website",
+      tabsLabel: "Sign in or register",
+      signIn: "Sign in",
+      register: "Register",
+    },
     login: {
       title: "Sign in",
       description: "Use the email address your administrator registered for you.",
@@ -228,6 +280,24 @@ export const en = {
       submit: "Sign in",
       submitting: "Signing in…",
       forgot: "Forgot your password?",
+      noAccount: "No account yet?",
+      register: "Request a staff account",
+    },
+    register: {
+      title: "Request a staff account",
+      description:
+        "For company staff who need to manage the website. An administrator reviews every request before it can sign in.",
+      name: "Full name",
+      email: "Work email",
+      password: "Choose a password",
+      confirmPassword: "Confirm password",
+      hint: "At least 12 characters. You will sign in with it once your request is approved.",
+      submit: "Send request",
+      submitting: "Sending…",
+      sentTitle: "Request sent",
+      sent: "If this email doesn't have an account yet, your request is now waiting for an administrator. You can sign in once it has been approved.",
+      haveAccount: "Already have an account?",
+      signIn: "Sign in",
     },
     errors: {
       invalidCredentials: "Email or password is incorrect.",
@@ -240,6 +310,13 @@ export const en = {
       passwordTooLong: "Use 128 characters or fewer.",
       passwordMismatch: "The two passwords don't match.",
       tokenInvalid: "This link is invalid or has expired. Request a new one.",
+      nameRequired: "Enter your full name.",
+      nameTooLong: "Use 120 characters or fewer.",
+      registrationClosed:
+        "Registration isn't open right now. Ask an administrator to create your account.",
+      registrationRetry:
+        "That was a little too quick, or this page was open for a long time. Please send it again.",
+      registrationRateLimited: "Too many requests from your connection. Try again in an hour.",
     },
     forgot: {
       title: "Forgot your password",
@@ -267,6 +344,10 @@ export const en = {
       body: (minutes: number) =>
         `Someone asked to reset the password for your account. Open this link within ${minutes} minutes:`,
       ignore: "If you didn't ask for this, ignore this email. Your password stays the same.",
+    },
+    approvedEmail: {
+      subject: "Your staff account is ready",
+      body: "An administrator approved your account request. Sign in with the email and password you chose:",
     },
     forbidden: {
       title: "You don't have access to this page",

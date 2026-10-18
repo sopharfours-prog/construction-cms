@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { type FormEvent, startTransition, useActionState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import type { ActionResult } from "@/lib/actions";
@@ -11,11 +11,17 @@ type Labels = Pick<AdminMessages, "common" | "validation">;
 /**
  * useActionState + consistent feedback: success/error toasts, field errors
  * resolved to the admin's language, and an onSuccess hook (redirect etc).
+ *
+ * Forms use `onSubmit`, not `action={formAction}`: React resets a form after
+ * every `action` prop run, failed ones included, which would wipe what the
+ * editor typed whenever the server rejects it (e.g. a duplicate slug). Forms
+ * that should clear after success do so in onSuccess.
  */
 export function useActionForm<T>(
   action: (prev: ActionResult<T> | null, formData: FormData) => Promise<ActionResult<T>>,
   labels: Labels,
-  options: { successMessage: string; onSuccess?: (data: T | undefined) => void },
+  /** No successMessage: no toast (the result is visible on screen, e.g. a sent chat message). */
+  options: { successMessage?: string; onSuccess?: (data: T | undefined) => void },
 ) {
   const [state, formAction, pending] = useActionState(action, null);
   const handled = useRef<ActionResult<T> | null>(null);
@@ -24,7 +30,7 @@ export function useActionForm<T>(
     if (!state || handled.current === state) return;
     handled.current = state;
     if (state.ok) {
-      toast.success(options.successMessage);
+      if (options.successMessage) toast.success(options.successMessage);
       options.onSuccess?.(state.data);
     } else {
       toast.error(labels.common.errors[state.error]);
@@ -32,6 +38,15 @@ export function useActionForm<T>(
       if (first) document.querySelector<HTMLElement>(`[name="${CSS.escape(first)}"]`)?.focus();
     }
   }, [state, labels, options]);
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    // React bubbles events out of portals: a form inside a dialog must not save this one.
+    if (event.target !== event.currentTarget) return;
+    event.preventDefault();
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    const formData = new FormData(event.currentTarget, submitter);
+    startTransition(() => formAction(formData));
+  };
 
   const fieldErrors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
   const errorFor = (name: string) => {
@@ -41,5 +56,5 @@ export function useActionForm<T>(
       : undefined;
   };
 
-  return { state, formAction, pending, fieldErrors, errorFor };
+  return { state, onSubmit, pending, fieldErrors, errorFor };
 }

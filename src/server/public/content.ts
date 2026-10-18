@@ -177,16 +177,35 @@ export const getPublicProject = cache(async (slug: string, locale: Locale) => {
   });
   if (!p) return null;
   const t = tr(p.translations, locale)!;
+  const relatedOrder = [
+    { featured: "desc" },
+    { completionDate: { sort: "desc", nulls: "first" } },
+  ] satisfies Prisma.ProjectOrderByWithRelationInput[];
   const related = await db.project.findMany({
     where: {
       ...liveProject,
       id: { not: p.id },
       ...(p.categoryId ? { categoryId: p.categoryId } : {}),
     },
-    orderBy: [{ featured: "desc" }, { completionDate: { sort: "desc", nulls: "first" } }],
+    orderBy: relatedOrder,
     take: 3,
     select: projectCardSelect,
   });
+  // Fewer than three in the same category: fill the row with other projects.
+  if (p.categoryId && related.length < 3) {
+    related.push(
+      ...(await db.project.findMany({
+        where: {
+          ...liveProject,
+          id: { not: p.id },
+          OR: [{ categoryId: null }, { categoryId: { not: p.categoryId } }],
+        },
+        orderBy: relatedOrder,
+        take: 3 - related.length,
+        select: projectCardSelect,
+      })),
+    );
+  }
   return {
     slug: p.slug,
     title: t.title,
@@ -479,7 +498,7 @@ export const getAboutData = cache(async (locale: Locale) => {
 });
 
 export const getHomeData = cache(async (locale: Locale) => {
-  const [featured, services, news, projectCount, statistics, about] = await Promise.all([
+  const [featured, services, news, projectCount, statistics, about, general] = await Promise.all([
     db.project.findMany({
       where: { ...liveProject, featured: true },
       orderBy: [{ sortOrder: "asc" }, { completionDate: { sort: "desc", nulls: "first" } }],
@@ -496,9 +515,25 @@ export const getHomeData = cache(async (locale: Locale) => {
     db.project.count({ where: { ...liveProject, projectStatus: "COMPLETED" } }),
     getSetting("statistics"),
     getPublicPage("about", locale),
+    getSetting("general"),
   ]);
+  // Photos chosen in Website Settings → General (each optional).
+  const photoIds = [general?.heroImageMediaId, general?.aboutImageMediaId].filter(
+    (id): id is string => Boolean(id),
+  );
+  const photos = new Map(
+    (
+      await db.media.findMany({
+        where: { id: { in: photoIds }, deletedAt: null, kind: "IMAGE" },
+        select: { id: true, ...image.select },
+      })
+    ).map(({ id, ...img }) => [id, img as PublicImage]),
+  );
+  const photo = (id: string | null | undefined) => (id ? (photos.get(id) ?? null) : null);
   const aboutText = richTextToPlain(about?.content);
   return {
+    heroImage: photo(general?.heroImageMediaId),
+    aboutImage: photo(general?.aboutImageMediaId),
     featured: featured.map((p) => toProjectCard(p, locale)),
     services,
     news: news.map((n) => toNewsCard(n, locale)),
@@ -518,4 +553,105 @@ export const getHomeData = cache(async (locale: Locale) => {
         }
       : null,
   };
+});
+
+// ─── Site search ─────────────────────────────────────────────────────────────
+
+export const SEARCH_MAX_LENGTH = 100;
+const SEARCH_PER_TYPE = 8;
+
+export type SearchHit = {
+  type: "project" | "service" | "news" | "page";
+  slug: string;
+  title: string;
+  snippet: string | null;
+};
+
+/**
+ * Everything live on the website that mentions `q`, in any language (shown in
+ * the visitor's): projects, services, news and pages, up to 8 of each. Same
+ * "live" rules as the public pages. Rich-text bodies are not searched.
+ */
+export const searchSite = cache(async (q: string, locale: Locale) => {
+  const term = q.trim().slice(0, SEARCH_MAX_LENGTH);
+  if (!term) return [];
+  const has = (fields: readonly string[]) => ({
+    translations: {
+      some: {
+        OR: fields.map((f) => ({ [f]: { contains: term, mode: "insensitive" as const } })),
+      },
+    },
+  });
+
+  const [projects, services, news, pages] = await Promise.all([
+    db.project.findMany({
+      where: { ...liveProject, ...has(["title", "location", "client", "shortDescription"]) },
+      orderBy: [{ featured: "desc" }, { updatedAt: "desc" }],
+      take: SEARCH_PER_TYPE,
+      select: {
+        slug: true,
+        translations: { select: { locale: true, title: true, shortDescription: true } },
+      },
+    }),
+    db.service.findMany({
+      where: { ...liveService, ...has(["title", "description"]) },
+      orderBy: { sortOrder: "asc" },
+      take: SEARCH_PER_TYPE,
+      select: {
+        slug: true,
+        translations: { select: { locale: true, title: true, description: true } },
+      },
+    }),
+    db.news.findMany({
+      where: { ...liveNews(), ...has(["title", "excerpt"]) },
+      orderBy: { publishedAt: "desc" },
+      take: SEARCH_PER_TYPE,
+      select: {
+        slug: true,
+        translations: { select: { locale: true, title: true, excerpt: true } },
+      },
+    }),
+    db.page.findMany({
+      where: { deletedAt: null, status: "PUBLISHED", ...has(["title", "seoDescription"]) },
+      take: SEARCH_PER_TYPE,
+      select: {
+        slug: true,
+        translations: { select: { locale: true, title: true, seoDescription: true } },
+      },
+    }),
+  ]);
+
+  return [
+    ...projects.map((p): SearchHit => {
+      const t = tr(p.translations, locale);
+      return {
+        type: "project",
+        slug: p.slug,
+        title: t?.title ?? p.slug,
+        snippet: t?.shortDescription ?? null,
+      };
+    }),
+    ...services.map((s): SearchHit => {
+      const t = tr(s.translations, locale);
+      return {
+        type: "service",
+        slug: s.slug,
+        title: t?.title ?? s.slug,
+        snippet: t?.description ?? null,
+      };
+    }),
+    ...news.map((n): SearchHit => {
+      const t = tr(n.translations, locale);
+      return { type: "news", slug: n.slug, title: t?.title ?? n.slug, snippet: t?.excerpt ?? null };
+    }),
+    ...pages.map((p): SearchHit => {
+      const t = tr(p.translations, locale);
+      return {
+        type: "page",
+        slug: p.slug,
+        title: t?.title ?? p.slug,
+        snippet: t?.seoDescription ?? null,
+      };
+    }),
+  ];
 });

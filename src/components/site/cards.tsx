@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, CalendarIcon, MapPinIcon } from "lucide-react";
+import { ArrowUpRightIcon, Building2Icon, CalendarIcon, MapPinIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
@@ -17,7 +17,7 @@ import type {
 } from "@/server/public/content";
 
 const statusStyle = {
-  COMPLETED: "bg-success text-white",
+  COMPLETED: "bg-success text-success-foreground",
   ONGOING: "bg-highlight text-highlight-foreground",
   UPCOMING: "bg-background/90 text-foreground",
 } as const;
@@ -49,10 +49,15 @@ export function CoverImage({
           className="object-cover transition-transform duration-700 group-hover:scale-105"
         />
       ) : (
+        // No photo yet: a quiet branded panel rather than an empty box.
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[repeating-linear-gradient(135deg,var(--muted)_0_14px,color-mix(in_oklab,var(--border)_70%,transparent)_14px_15px)]"
-        />
+          className="absolute inset-0 flex items-center justify-center bg-[repeating-linear-gradient(135deg,var(--muted)_0_14px,color-mix(in_oklab,var(--border)_55%,transparent)_14px_15px)]"
+        >
+          <span className="flex size-14 items-center justify-center rounded-full bg-background/80 text-muted-foreground/60">
+            <Building2Icon className="size-6" />
+          </span>
+        </div>
       )}
     </div>
   );
@@ -64,21 +69,32 @@ export function ProjectCard({
   t,
   headingLevel = "h3",
   priority,
+  lead = false,
 }: {
   project: ProjectItem;
   locale: Locale;
   t: Messages["public"];
   headingLevel?: "h2" | "h3";
   priority?: boolean;
+  /** Large card that opens a showcase grid: its photo fills the space beside the smaller cards. */
+  lead?: boolean;
 }) {
   const Heading = headingLevel;
   return (
-    <article className="group relative flex flex-col">
+    <article className="group relative flex h-full flex-col shadow-sm transition-shadow duration-300 hover:shadow-xl">
       <CoverImage
         image={project.cover}
         alt={project.title}
-        sizes="(min-width: 1280px) 30vw, (min-width: 768px) 45vw, 100vw"
-        className="aspect-[4/3]"
+        sizes={
+          lead
+            ? "(min-width: 1024px) 60vw, 100vw"
+            : "(min-width: 1280px) 30vw, (min-width: 768px) 45vw, 100vw"
+        }
+        className={
+          lead
+            ? "aspect-[4/3] md:aspect-[16/9] lg:aspect-auto lg:min-h-72 lg:flex-1"
+            : "aspect-[4/3]"
+        }
         priority={priority}
       />
       <span
@@ -89,11 +105,13 @@ export function ProjectCard({
       >
         {t.projects.statuses[project.status]}
       </span>
-      <div className="flex flex-1 flex-col border-x border-b bg-card p-5">
+      <div
+        className={cn("flex flex-col border-x border-b bg-card p-5", lead ? "lg:p-7" : "flex-1")}
+      >
         <p className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
           {[project.category, project.year].filter(Boolean).join(" · ")}
         </p>
-        <Heading className="text-xl type-heading">
+        <Heading className={cn("type-heading", lead ? "text-xl lg:text-3xl" : "text-xl")}>
           <Link
             href={localizedPath(locale, `/projects/${project.slug}`) as Route}
             className="after:absolute after:inset-0 focus-visible:outline-none after:focus-visible:ring-2 after:focus-visible:ring-ring"
@@ -101,6 +119,11 @@ export function ProjectCard({
             {project.title}
           </Link>
         </Heading>
+        {lead && project.summary ? (
+          <p className="mt-3 line-clamp-2 hidden max-w-2xl text-muted-foreground lg:block">
+            {project.summary}
+          </p>
+        ) : null}
         {project.location ? (
           <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
             <MapPinIcon className="size-4 shrink-0" aria-hidden="true" />
@@ -117,14 +140,26 @@ export function ServiceCard({
   locale,
   t,
   index,
+  headingLevel = "h3",
 }: {
   service: ServiceItem;
   locale: Locale;
   t: Messages["public"];
   index?: number;
+  /** h2 when the card list sits directly under the page's h1. */
+  headingLevel?: "h2" | "h3";
 }) {
+  const Heading = headingLevel;
   return (
     <article className="group relative flex flex-col border bg-card p-7 transition-colors hover:border-primary">
+      {service.cover ? (
+        <CoverImage
+          image={service.cover}
+          alt={service.title}
+          sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 100vw"
+          className="-mx-7 -mt-7 mb-6 aspect-[16/9]"
+        />
+      ) : null}
       <div className="mb-6 flex items-start justify-between">
         <span className="flex size-12 items-center justify-center bg-primary text-primary-foreground transition-colors group-hover:bg-highlight group-hover:text-highlight-foreground">
           <ServiceIcon name={service.icon} className="size-6" />
@@ -138,14 +173,14 @@ export function ServiceCard({
           </span>
         ) : null}
       </div>
-      <h3 className="text-xl type-heading">
+      <Heading className="text-xl type-heading">
         <Link
           href={localizedPath(locale, `/services/${service.slug}`) as Route}
           className="after:absolute after:inset-0 focus-visible:outline-none after:focus-visible:ring-2 after:focus-visible:ring-ring"
         >
           {service.title}
         </Link>
-      </h3>
+      </Heading>
       {service.description ? (
         <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground">
           {service.description}
@@ -166,11 +201,15 @@ export function NewsCard({
   news,
   locale,
   t,
+  headingLevel = "h3",
 }: {
   news: NewsItem;
   locale: Locale;
   t: Messages["public"];
+  /** h2 when the card list sits directly under the page's h1. */
+  headingLevel?: "h2" | "h3";
 }) {
+  const Heading = headingLevel;
   return (
     <article className="group relative flex flex-col">
       <CoverImage
@@ -181,7 +220,7 @@ export function NewsCard({
       />
       <div className="flex flex-1 flex-col pt-5">
         <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-          {news.category ? <span className="text-highlight">{news.category}</span> : null}
+          {news.category ? <span className="text-highlight-ink">{news.category}</span> : null}
           <span className="flex items-center gap-1">
             <CalendarIcon className="size-3.5" aria-hidden="true" />
             <time dateTime={news.publishedAt.toISOString()}>
@@ -189,14 +228,14 @@ export function NewsCard({
             </time>
           </span>
         </p>
-        <h3 className="text-lg type-heading">
+        <Heading className="text-lg type-heading">
           <Link
             href={localizedPath(locale, `/news/${news.slug}`) as Route}
             className="after:absolute after:inset-0 focus-visible:outline-none after:focus-visible:ring-2 after:focus-visible:ring-ring"
           >
             {news.title}
           </Link>
-        </h3>
+        </Heading>
         {news.excerpt ? (
           <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
             {news.excerpt}

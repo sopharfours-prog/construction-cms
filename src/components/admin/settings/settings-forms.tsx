@@ -15,9 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { localeConfig, locales, type Locale } from "@/config/i18n";
+import type { SettingsSection } from "@/config/admin-nav";
 import type { AdminMessages } from "@/i18n/admin";
 import { contrastRatio } from "@/lib/theme/contrast";
 import type { SettingsFormKey } from "@/lib/validation/settings-forms";
@@ -33,6 +33,8 @@ export type SettingsValues = {
     description: Localized;
     logo: PickedImage | null;
     favicon: PickedImage | null;
+    heroImage: PickedImage | null;
+    aboutImage: PickedImage | null;
     foundedYear: number | null;
   };
   contact: {
@@ -76,7 +78,7 @@ function GroupForm({
   children: (errorFor: (n: string) => string | undefined) => React.ReactNode;
 }) {
   const router = useRouter();
-  const { formAction, pending, errorFor } = useActionForm(
+  const { onSubmit, pending, errorFor } = useActionForm(
     saveSettingsAction.bind(null, group),
     labels,
     {
@@ -85,7 +87,7 @@ function GroupForm({
     },
   );
   return (
-    <form action={formAction} noValidate>
+    <form onSubmit={onSubmit} noValidate>
       <Card>
         <CardContent>
           <fieldset disabled={!canEdit} className="grid gap-5">
@@ -126,7 +128,7 @@ function LocalizedInput({
   return (
     <fieldset className="grid gap-2">
       <legend className="mb-1 text-sm font-medium">{label}</legend>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {locales.map((l) => (
           <FormField
             key={l}
@@ -186,7 +188,10 @@ function AppearanceFields({
         {pairs.map(([bg, fg]) => {
           const ratio = contrastRatio(brand[bg], brand[fg]);
           return (
-            <div key={bg} className="grid gap-3 sm:grid-cols-[1fr_1fr_12rem] sm:items-end">
+            <div
+              key={bg}
+              className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_12rem] sm:items-end"
+            >
               {[bg, fg].map((key) => (
                 <FormField
                   key={key}
@@ -314,11 +319,14 @@ function LanguageToggles({
   );
 }
 
+/** One Website Settings section; the sidebar's Settings sub-menu switches between them. */
 export function SettingsForms({
+  section,
   values,
   canEdit,
   labels,
 }: {
+  section: SettingsSection;
   values: SettingsValues;
   canEdit: boolean;
   labels: Labels;
@@ -326,300 +334,329 @@ export function SettingsForms({
   const s = labels.settings;
   const num = (v: number | null) => (v === null ? "" : String(v));
   return (
-    <Tabs defaultValue="general" className="gap-6">
-      <div className="overflow-x-auto">
-        <TabsList>
-          {(Object.keys(s.tabs) as (keyof typeof s.tabs)[]).map((key) => (
-            <TabsTrigger key={key} value={key}>
-              {s.tabs[key]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </div>
-
-      <TabsContent value="general">
-        <GroupForm group="general" canEdit={canEdit} labels={labels}>
-          {(e) => (
-            <>
-              <LocalizedInput
-                name="siteName"
-                label={s.general.siteName}
-                value={values.general.siteName}
-                errorFor={e}
-                max={120}
-              />
-              <LocalizedInput
-                name="tagline"
-                label={s.general.tagline}
-                hint={s.general.taglineHint}
-                value={values.general.tagline}
-                errorFor={e}
-                max={200}
-              />
-              <LocalizedInput
-                name="description"
-                label={s.general.description}
-                hint={s.general.descriptionHint}
-                value={values.general.description}
-                errorFor={e}
-                max={500}
-                multiline
-              />
-              <div className="grid gap-5 md:grid-cols-2">
-                <MediaField
-                  name="logoMediaId"
-                  label={s.general.logo}
-                  error={e("logoMediaId")}
-                  defaultValue={values.general.logo}
-                  labels={labels}
+    <>
+      {section === "general" ? (
+        <div>
+          <GroupForm group="general" canEdit={canEdit} labels={labels}>
+            {(e) => (
+              <>
+                <LocalizedInput
+                  name="siteName"
+                  label={s.general.siteName}
+                  value={values.general.siteName}
+                  errorFor={e}
+                  max={120}
                 />
-                <MediaField
-                  name="faviconMediaId"
-                  label={s.general.favicon}
-                  error={e("faviconMediaId")}
-                  defaultValue={values.general.favicon}
-                  labels={labels}
+                <LocalizedInput
+                  name="tagline"
+                  label={s.general.tagline}
+                  hint={s.general.taglineHint}
+                  value={values.general.tagline}
+                  errorFor={e}
+                  max={200}
                 />
-              </div>
-              <FormField id="s-founded" label={s.general.foundedYear} error={e("foundedYear")}>
-                {(a) => (
-                  <Input
-                    {...a}
-                    name="foundedYear"
-                    inputMode="numeric"
-                    defaultValue={num(values.general.foundedYear)}
-                    maxLength={4}
-                    className="w-32"
+                <LocalizedInput
+                  name="description"
+                  label={s.general.description}
+                  hint={s.general.descriptionHint}
+                  value={values.general.description}
+                  errorFor={e}
+                  max={500}
+                  multiline
+                />
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <MediaField
+                    name="logoMediaId"
+                    label={s.general.logo}
+                    error={e("logoMediaId")}
+                    defaultValue={values.general.logo}
+                    labels={labels}
                   />
-                )}
-              </FormField>
-            </>
-          )}
-        </GroupForm>
-      </TabsContent>
-
-      <TabsContent value="contact">
-        <GroupForm group="contact" canEdit={canEdit} labels={labels}>
-          {(e) => (
-            <>
-              <LocalizedInput
-                name="address"
-                label={s.contact.address}
-                value={values.contact.address}
-                errorFor={e}
-                max={300}
-                multiline
-              />
-              <div className="grid gap-5 md:grid-cols-2">
-                <FormField
-                  id="s-phones"
-                  label={s.contact.phones}
-                  hint={s.contact.phonesHint}
-                  error={e("phones") ?? e("phones.0") ?? e("phones.1")}
-                >
+                  <MediaField
+                    name="faviconMediaId"
+                    label={s.general.favicon}
+                    error={e("faviconMediaId")}
+                    defaultValue={values.general.favicon}
+                    labels={labels}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <MediaField
+                    name="heroImageMediaId"
+                    label={s.general.heroImage}
+                    hint={s.general.heroImageHint}
+                    error={e("heroImageMediaId")}
+                    defaultValue={values.general.heroImage}
+                    labels={labels}
+                  />
+                  <MediaField
+                    name="aboutImageMediaId"
+                    label={s.general.aboutImage}
+                    hint={s.general.aboutImageHint}
+                    error={e("aboutImageMediaId")}
+                    defaultValue={values.general.aboutImage}
+                    labels={labels}
+                  />
+                </div>
+                <FormField id="s-founded" label={s.general.foundedYear} error={e("foundedYear")}>
                   {(a) => (
-                    <Textarea
+                    <Input
                       {...a}
-                      name="phones"
-                      defaultValue={values.contact.phones.join("\n")}
-                      rows={3}
+                      name="foundedYear"
+                      inputMode="numeric"
+                      defaultValue={num(values.general.foundedYear)}
+                      maxLength={4}
+                      className="w-32"
                     />
                   )}
                 </FormField>
-                <div className="grid content-start gap-5">
-                  <FormField id="s-email" label={s.contact.email} error={e("email")}>
+              </>
+            )}
+          </GroupForm>
+        </div>
+      ) : null}
+
+      {section === "contact" ? (
+        <div>
+          <GroupForm group="contact" canEdit={canEdit} labels={labels}>
+            {(e) => (
+              <>
+                <LocalizedInput
+                  name="address"
+                  label={s.contact.address}
+                  value={values.contact.address}
+                  errorFor={e}
+                  max={300}
+                  multiline
+                />
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <FormField
+                    id="s-phones"
+                    label={s.contact.phones}
+                    hint={s.contact.phonesHint}
+                    error={["phones", ...[0, 1, 2, 3, 4].map((i) => `phones.${i}`)]
+                      .map(e)
+                      .find(Boolean)}
+                  >
                     {(a) => (
-                      <Input {...a} name="email" type="email" defaultValue={values.contact.email} />
+                      <Textarea
+                        {...a}
+                        name="phones"
+                        defaultValue={values.contact.phones.join("\n")}
+                        rows={3}
+                      />
                     )}
                   </FormField>
+                  <div className="grid content-start gap-5">
+                    <FormField id="s-email" label={s.contact.email} error={e("email")}>
+                      {(a) => (
+                        <Input
+                          {...a}
+                          name="email"
+                          type="email"
+                          defaultValue={values.contact.email}
+                        />
+                      )}
+                    </FormField>
+                    <FormField
+                      id="s-notify"
+                      label={s.contact.notificationEmail}
+                      hint={s.contact.notificationHint}
+                      error={e("notificationEmail")}
+                    >
+                      {(a) => (
+                        <Input
+                          {...a}
+                          name="notificationEmail"
+                          type="email"
+                          defaultValue={values.contact.notificationEmail ?? ""}
+                        />
+                      )}
+                    </FormField>
+                  </div>
+                </div>
+                <LocalizedInput
+                  name="openingHours"
+                  label={s.contact.openingHours}
+                  value={values.contact.openingHours}
+                  errorFor={e}
+                  max={200}
+                  multiline
+                />
+                <FormField
+                  id="s-map"
+                  label={s.contact.mapEmbedUrl}
+                  hint={s.contact.mapHint}
+                  error={e("mapEmbedUrl")}
+                >
+                  {(a) => (
+                    <Input
+                      {...a}
+                      name="mapEmbedUrl"
+                      type="url"
+                      defaultValue={values.contact.mapEmbedUrl ?? ""}
+                    />
+                  )}
+                </FormField>
+              </>
+            )}
+          </GroupForm>
+        </div>
+      ) : null}
+
+      {section === "social" ? (
+        <div>
+          <GroupForm group="social" canEdit={canEdit} labels={labels}>
+            {(e) => (
+              <>
+                <p className="text-sm text-muted-foreground">{s.social.hint}</p>
+                {(["facebook", "instagram", "tiktok", "youtube", "linkedin"] as const).map((n) => (
                   <FormField
-                    id="s-notify"
-                    label={s.contact.notificationEmail}
-                    hint={s.contact.notificationHint}
-                    error={e("notificationEmail")}
+                    key={n}
+                    id={`s-${n}`}
+                    label={
+                      {
+                        facebook: "Facebook",
+                        instagram: "Instagram",
+                        tiktok: "TikTok",
+                        youtube: "YouTube",
+                        linkedin: "LinkedIn",
+                      }[n]
+                    }
+                    error={e(n)}
                   >
                     {(a) => (
                       <Input
                         {...a}
-                        name="notificationEmail"
-                        type="email"
-                        defaultValue={values.contact.notificationEmail ?? ""}
-                      />
-                    )}
-                  </FormField>
-                </div>
-              </div>
-              <LocalizedInput
-                name="openingHours"
-                label={s.contact.openingHours}
-                value={values.contact.openingHours}
-                errorFor={e}
-                max={200}
-                multiline
-              />
-              <FormField
-                id="s-map"
-                label={s.contact.mapEmbedUrl}
-                hint={s.contact.mapHint}
-                error={e("mapEmbedUrl")}
-              >
-                {(a) => (
-                  <Input
-                    {...a}
-                    name="mapEmbedUrl"
-                    type="url"
-                    defaultValue={values.contact.mapEmbedUrl ?? ""}
-                  />
-                )}
-              </FormField>
-            </>
-          )}
-        </GroupForm>
-      </TabsContent>
-
-      <TabsContent value="social">
-        <GroupForm group="social" canEdit={canEdit} labels={labels}>
-          {(e) => (
-            <>
-              <p className="text-sm text-muted-foreground">{s.social.hint}</p>
-              {(["facebook", "instagram", "tiktok", "youtube", "linkedin"] as const).map((n) => (
-                <FormField
-                  key={n}
-                  id={`s-${n}`}
-                  label={
-                    {
-                      facebook: "Facebook",
-                      instagram: "Instagram",
-                      tiktok: "TikTok",
-                      youtube: "YouTube",
-                      linkedin: "LinkedIn",
-                    }[n]
-                  }
-                  error={e(n)}
-                >
-                  {(a) => (
-                    <Input
-                      {...a}
-                      name={n}
-                      type="url"
-                      placeholder="https://"
-                      defaultValue={values.social[n] ?? ""}
-                    />
-                  )}
-                </FormField>
-              ))}
-            </>
-          )}
-        </GroupForm>
-      </TabsContent>
-
-      <TabsContent value="seo">
-        <GroupForm group="seo" canEdit={canEdit} labels={labels}>
-          {(e) => (
-            <>
-              <LocalizedInput
-                name="defaultTitle"
-                label={s.seo.defaultTitle}
-                value={values.seo.defaultTitle}
-                errorFor={e}
-                max={70}
-              />
-              <LocalizedInput
-                name="defaultDescription"
-                label={s.seo.defaultDescription}
-                hint={s.seo.descriptionHint}
-                value={values.seo.defaultDescription}
-                errorFor={e}
-                max={170}
-                multiline
-              />
-              <MediaField
-                name="ogImageMediaId"
-                label={s.seo.ogImage}
-                hint={s.seo.ogHint}
-                error={e("ogImageMediaId")}
-                defaultValue={values.seo.ogImage}
-                labels={labels}
-              />
-              <div className="grid gap-5 md:grid-cols-2">
-                <FormField
-                  id="s-ga"
-                  label={s.seo.ga}
-                  hint={s.seo.gaHint}
-                  error={e("googleAnalyticsId")}
-                >
-                  {(a) => (
-                    <Input
-                      {...a}
-                      name="googleAnalyticsId"
-                      defaultValue={values.seo.googleAnalyticsId ?? ""}
-                      className="font-mono"
-                      placeholder="G-XXXXXXXXXX"
-                    />
-                  )}
-                </FormField>
-                <FormField
-                  id="s-gsc"
-                  label={s.seo.verification}
-                  hint={s.seo.verificationHint}
-                  error={e("googleSiteVerification")}
-                >
-                  {(a) => (
-                    <Input
-                      {...a}
-                      name="googleSiteVerification"
-                      defaultValue={values.seo.googleSiteVerification ?? ""}
-                      className="font-mono"
-                    />
-                  )}
-                </FormField>
-              </div>
-              <p className="text-xs text-muted-foreground">{s.seo.indexing}</p>
-            </>
-          )}
-        </GroupForm>
-      </TabsContent>
-
-      <TabsContent value="appearance">
-        <GroupForm group="appearance" canEdit={canEdit} labels={labels}>
-          {(e) => <AppearanceFields value={values.appearance} errorFor={e} labels={labels} />}
-        </GroupForm>
-      </TabsContent>
-
-      <TabsContent value="statistics">
-        <GroupForm group="statistics" canEdit={canEdit} labels={labels}>
-          {(e) => (
-            <>
-              <p className="text-sm text-muted-foreground">{s.statistics.hint}</p>
-              <div className="grid gap-5 sm:grid-cols-3">
-                {(
-                  [
-                    ["yearsOfExperience", s.statistics.years],
-                    ["clients", s.statistics.clients],
-                    ["teamMembers", s.statistics.team],
-                  ] as const
-                ).map(([n, label]) => (
-                  <FormField key={n} id={`s-${n}`} label={label} error={e(n)}>
-                    {(a) => (
-                      <Input
-                        {...a}
                         name={n}
-                        inputMode="numeric"
-                        defaultValue={num(values.statistics[n])}
-                        maxLength={7}
+                        type="url"
+                        placeholder="https://"
+                        defaultValue={values.social[n] ?? ""}
                       />
                     )}
                   </FormField>
                 ))}
-              </div>
-            </>
-          )}
-        </GroupForm>
-      </TabsContent>
+              </>
+            )}
+          </GroupForm>
+        </div>
+      ) : null}
 
-      <TabsContent value="languages">
-        <LanguageToggles languages={values.languages} canEdit={canEdit} labels={labels} />
-      </TabsContent>
-    </Tabs>
+      {section === "seo" ? (
+        <div>
+          <GroupForm group="seo" canEdit={canEdit} labels={labels}>
+            {(e) => (
+              <>
+                <LocalizedInput
+                  name="defaultTitle"
+                  label={s.seo.defaultTitle}
+                  value={values.seo.defaultTitle}
+                  errorFor={e}
+                  max={70}
+                />
+                <LocalizedInput
+                  name="defaultDescription"
+                  label={s.seo.defaultDescription}
+                  hint={s.seo.descriptionHint}
+                  value={values.seo.defaultDescription}
+                  errorFor={e}
+                  max={170}
+                  multiline
+                />
+                <MediaField
+                  name="ogImageMediaId"
+                  label={s.seo.ogImage}
+                  hint={s.seo.ogHint}
+                  error={e("ogImageMediaId")}
+                  defaultValue={values.seo.ogImage}
+                  labels={labels}
+                />
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <FormField
+                    id="s-ga"
+                    label={s.seo.ga}
+                    hint={s.seo.gaHint}
+                    error={e("googleAnalyticsId")}
+                  >
+                    {(a) => (
+                      <Input
+                        {...a}
+                        name="googleAnalyticsId"
+                        defaultValue={values.seo.googleAnalyticsId ?? ""}
+                        className="font-mono"
+                        placeholder="G-XXXXXXXXXX"
+                      />
+                    )}
+                  </FormField>
+                  <FormField
+                    id="s-gsc"
+                    label={s.seo.verification}
+                    hint={s.seo.verificationHint}
+                    error={e("googleSiteVerification")}
+                  >
+                    {(a) => (
+                      <Input
+                        {...a}
+                        name="googleSiteVerification"
+                        defaultValue={values.seo.googleSiteVerification ?? ""}
+                        className="font-mono"
+                      />
+                    )}
+                  </FormField>
+                </div>
+                <p className="text-xs text-muted-foreground">{s.seo.indexing}</p>
+              </>
+            )}
+          </GroupForm>
+        </div>
+      ) : null}
+
+      {section === "appearance" ? (
+        <div>
+          <GroupForm group="appearance" canEdit={canEdit} labels={labels}>
+            {(e) => <AppearanceFields value={values.appearance} errorFor={e} labels={labels} />}
+          </GroupForm>
+        </div>
+      ) : null}
+
+      {section === "statistics" ? (
+        <div>
+          <GroupForm group="statistics" canEdit={canEdit} labels={labels}>
+            {(e) => (
+              <>
+                <p className="text-sm text-muted-foreground">{s.statistics.hint}</p>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                  {(
+                    [
+                      ["yearsOfExperience", s.statistics.years],
+                      ["clients", s.statistics.clients],
+                      ["teamMembers", s.statistics.team],
+                    ] as const
+                  ).map(([n, label]) => (
+                    <FormField key={n} id={`s-${n}`} label={label} error={e(n)}>
+                      {(a) => (
+                        <Input
+                          {...a}
+                          name={n}
+                          inputMode="numeric"
+                          defaultValue={num(values.statistics[n])}
+                          maxLength={7}
+                        />
+                      )}
+                    </FormField>
+                  ))}
+                </div>
+              </>
+            )}
+          </GroupForm>
+        </div>
+      ) : null}
+
+      {section === "languages" ? (
+        <div>
+          <LanguageToggles languages={values.languages} canEdit={canEdit} labels={labels} />
+        </div>
+      ) : null}
+    </>
   );
 }

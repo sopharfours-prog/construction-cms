@@ -1,4 +1,4 @@
-import { LockIcon } from "lucide-react";
+import { LockIcon, UserPlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -8,7 +8,9 @@ import { AdminPageHeader } from "@/components/admin/page-header";
 import { UserForm } from "@/components/admin/users/user-form";
 import { UserSecurity } from "@/components/admin/users/user-security";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { NotificationsSync } from "@/components/admin/shell/notifications-sync";
 import { getAdminMessages } from "@/i18n/admin";
+import { markAccountRequestSeen } from "@/server/services/notifications";
 import { getAdminLocale } from "@/i18n/admin-locale";
 import { hasPermission, requirePermission } from "@/lib/auth/session";
 import { updateUserAction } from "@/server/actions/users";
@@ -26,6 +28,9 @@ export default async function EditUserPage({ params }: PageProps<"/admin/users/[
   const t = getAdminMessages(await getAdminLocale());
   const [target, roles] = await Promise.all([getUser(id), rolesWithinActor(actor)]);
   if (!target) notFound();
+  // An administrator opened the account request: it leaves the bell (it stays pending).
+  if (target.status === "PENDING" && hasPermission(actor, "users.update"))
+    await markAccountRequestSeen(target.id);
 
   const isSelf = target.id === actor.id;
   const withinActor = roles.find((r) => r.id === target.roleId)?.withinActor ?? false;
@@ -33,11 +38,23 @@ export default async function EditUserPage({ params }: PageProps<"/admin/users/[
 
   return (
     <>
-      <AdminPageHeader title={target.name} description={`${target.email} · ${target.role.name}`} />
+      <NotificationsSync />
+      <AdminPageHeader
+        title={target.name}
+        description={`${target.email} · ${
+          target.status === "PENDING" ? t.users.status.PENDING : target.role.name
+        }`}
+      />
       {!canUpdate ? (
         <Alert className="mb-6">
           <LockIcon aria-hidden="true" />
           <AlertDescription>{t.validation.beyondYourPermissions}</AlertDescription>
+        </Alert>
+      ) : null}
+      {canUpdate && target.status === "PENDING" ? (
+        <Alert className="mb-6">
+          <UserPlusIcon aria-hidden="true" />
+          <AlertDescription>{t.users.pendingHint}</AlertDescription>
         </Alert>
       ) : null}
       {canUpdate ? (

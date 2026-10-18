@@ -1,15 +1,28 @@
 "use client";
 
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
 
+import { FlagIcon } from "@/components/shared/flag-icon";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { localeConfig, type Locale } from "@/config/i18n";
-import { fmt } from "@/i18n/format";
 import { SITE_LOCALE_COOKIE, switchLocalePath } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 
-/** "LO | EN": plain links to the same page in the other language; the choice is remembered. */
+/**
+ * Language menu: the current language's flag, opening a list of languages
+ * (flag and native name). Each entry links to the same page in that language
+ * and the choice is remembered. Flags alone say nothing to screen readers, so
+ * every entry is named in its own language.
+ */
 export function LanguageSwitcher({
   current,
   available,
@@ -18,42 +31,57 @@ export function LanguageSwitcher({
 }: {
   available: readonly Locale[];
   current: Locale;
-  labels: { language: string; switchTo: string };
+  /** switchTo: per target locale, written in that locale ("Read this page in English"). */
+  labels: { language: string; switchTo: Partial<Record<Locale, string>> };
   className?: string;
 }) {
   const pathname = usePathname();
   return (
-    <nav
-      aria-label={labels.language}
-      className={cn("flex items-center text-sm font-semibold", className)}
-    >
-      {available.map((locale, index) => (
-        <span key={locale} className="flex items-center">
-          {index > 0 ? (
-            <span aria-hidden="true" className="px-1.5 opacity-40">
-              |
-            </span>
-          ) : null}
-          {locale === current ? (
-            <span aria-current="true" className="px-1 py-1">
-              {localeConfig[locale].label}
-            </span>
-          ) : (
-            <Link
-              href={switchLocalePath(pathname, locale) as Route}
-              hrefLang={localeConfig[locale].htmlLang}
-              lang={localeConfig[locale].htmlLang}
-              aria-label={fmt(labels.switchTo, { language: localeConfig[locale].nativeName })}
-              className="rounded-sm px-1 py-1 opacity-60 transition hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              onClick={() => {
-                document.cookie = `${SITE_LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; samesite=lax`;
-              }}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className={cn("h-9 gap-1.5 px-2", className)}
+          aria-label={`${labels.language}: ${localeConfig[current].nativeName}`}
+        >
+          <FlagIcon locale={current} />
+          <span className="text-xs font-semibold">{localeConfig[current].label}</span>
+          <ChevronDownIcon className="size-3.5 opacity-60" aria-hidden="true" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-44">
+        {available.map((locale) =>
+          locale === current ? (
+            <DropdownMenuItem
+              key={locale}
+              disabled
+              aria-current="true"
+              className="data-[disabled]:opacity-100"
             >
-              {localeConfig[locale].label}
-            </Link>
-          )}
-        </span>
-      ))}
-    </nav>
+              <FlagIcon locale={locale} />
+              <span lang={localeConfig[locale].htmlLang} className="flex-1 font-medium">
+                {localeConfig[locale].nativeName}
+              </span>
+              <CheckIcon className="text-primary" aria-hidden="true" />
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem key={locale} asChild>
+              <Link
+                href={switchLocalePath(pathname, locale) as Route}
+                hrefLang={localeConfig[locale].htmlLang}
+                lang={localeConfig[locale].htmlLang}
+                aria-label={labels.switchTo[locale]}
+                onClick={() => {
+                  document.cookie = `${SITE_LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; samesite=lax`;
+                }}
+              >
+                <FlagIcon locale={locale} />
+                <span className="flex-1">{localeConfig[locale].nativeName}</span>
+              </Link>
+            </DropdownMenuItem>
+          ),
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

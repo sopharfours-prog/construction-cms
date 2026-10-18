@@ -23,6 +23,10 @@ export const generalSettingsSchema = z.object({
   description: localizedText(500),
   logoMediaId: mediaId,
   faviconMediaId: mediaId,
+  /** Large photo behind the home page headline (else the first featured project's cover). */
+  heroImageMediaId: mediaId.default(null),
+  /** Photo beside "About us" on the home page. */
+  aboutImageMediaId: mediaId.default(null),
   foundedYear: z.number().int().min(1900).max(2100).nullable(),
 });
 

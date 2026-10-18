@@ -64,6 +64,9 @@ services, news, inquiries…) is created when `SEED_SAMPLE_DATA=true` (default
 outside production). After the first run, remove `SEED_ADMIN_PASSWORD` from
 `.env`.
 
+The database commands (`npm run db:*`) read `.env.local` and `.env`, like
+Next.js does: `.env.local` wins, and variables set in the shell win over both.
+
 To change the schema: edit `prisma/schema.prisma`, then
 `npm run db:migrate -- --name what_changed` creates and applies a migration.
 See [DATABASE.md](DATABASE.md#writing-migrations).

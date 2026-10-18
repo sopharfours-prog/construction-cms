@@ -45,7 +45,11 @@ export const userCreateSchema = z
   });
 export type UserCreateInput = z.output<typeof userCreateSchema>;
 
-export const userUpdateSchema = z.object(userFields);
+/** PENDING is only ever kept (editing a request without deciding), never set. */
+export const userUpdateSchema = z.object({
+  ...userFields,
+  status: z.enum(["ACTIVE", "DISABLED", "PENDING"], { error: "invalid" }),
+});
 export type UserUpdateInput = z.output<typeof userUpdateSchema>;
 
 export const setPasswordSchema = z
@@ -53,6 +57,30 @@ export const setPasswordSchema = z
   .refine((v) => v.password === v.confirmPassword, {
     path: ["confirmPassword"],
     message: "passwordMismatch",
+  });
+
+/** A signed-in user's own profile. Email and role are changed by an administrator. */
+export const profileInputSchema = z.object({
+  name: userFields.name,
+  preferredLocale: userFields.preferredLocale,
+});
+export type ProfileInput = z.output<typeof profileInputSchema>;
+
+/** Signed-in user changing their own password: proves they know the current one. */
+export const changeOwnPasswordSchema = z
+  .object({
+    currentPassword: z
+      .string({ error: "required" })
+      .min(1, { error: "required" })
+      .max(PASSWORD_MAX_LENGTH, { error: "tooLong" }),
+    password,
+    confirmPassword: z.string(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.password !== v.confirmPassword)
+      ctx.addIssue({ code: "custom", path: ["confirmPassword"], message: "passwordMismatch" });
+    if (v.password === v.currentPassword)
+      ctx.addIssue({ code: "custom", path: ["password"], message: "passwordUnchanged" });
   });
 
 const permissionKeys = allPermissions.map((p) => p.key) as [PermissionKey, ...PermissionKey[]];

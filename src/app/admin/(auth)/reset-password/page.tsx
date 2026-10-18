@@ -24,7 +24,7 @@ export default async function ResetPasswordPage({
 
   return (
     <>
-      <h1 className="mb-8 text-3xl type-heading">{t.reset.title}</h1>
+      <h1 className="mb-6 text-2xl type-heading">{t.reset.title}</h1>
       {validShape ? (
         <ResetPasswordForm labels={toAuthLabels(t)} token={token} />
       ) : (

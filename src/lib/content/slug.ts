@@ -19,5 +19,7 @@ export const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /** Slug given to a soft-deleted row so its original slug can be reused. */
 export function deletedSlug(slug: string, id: string): string {
-  return `${slug.slice(0, 170)}-deleted-${id.replace(/-/g, "").slice(-12)}`;
+  // Cut, then drop a hyphen left at the cut: "a--deleted-…" breaks the slug CHECK constraint.
+  const base = slug.slice(0, 170).replace(/-+$/, "");
+  return `${base}-deleted-${id.replace(/-/g, "").slice(-12)}`;
 }

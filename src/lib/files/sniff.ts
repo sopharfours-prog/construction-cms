@@ -77,6 +77,11 @@ export const uploadPolicies = {
     extensions: ["jpg", "png", "webp", "avif", "mp4", "webm", "pdf", "docx", "xlsx"],
     maxBytes: { IMAGE: 20 * 1024 * 1024, VIDEO: 100 * 1024 * 1024, DOCUMENT: 20 * 1024 * 1024 },
   },
+  /** A person's own profile photo: images only. */
+  avatar: {
+    extensions: ["jpg", "png", "webp", "avif"],
+    maxBytes: { IMAGE: 5 * 1024 * 1024, VIDEO: 0, DOCUMENT: 0 },
+  },
   attachment: {
     extensions: ["pdf", "jpg", "png", "docx"],
     maxBytes: { IMAGE: 10 * 1024 * 1024, VIDEO: 0, DOCUMENT: 10 * 1024 * 1024 },

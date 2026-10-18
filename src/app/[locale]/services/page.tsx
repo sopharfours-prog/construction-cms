@@ -47,9 +47,10 @@ export default async function ServicesPage({ params }: PageProps<"/[locale]/serv
         ]}
       />
       <section className="container-site py-14 lg:py-20" aria-label={t.public.services.title}>
-        <div className="grid gap-px sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-px sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service, i) => (
             <ServiceCard
+              headingLevel="h2"
               key={service.slug}
               service={service}
               locale={locale}

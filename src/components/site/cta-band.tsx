@@ -25,11 +25,7 @@ export function CtaBand({
           <p className="mt-3 text-lg opacity-85">{text}</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button
-            asChild
-            size="lg"
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
+          <Button asChild size="lg" className="bg-brand text-brand-foreground hover:bg-brand/90">
             <Link href={primary.href as Route}>
               {primary.label}
               <ArrowRightIcon aria-hidden="true" />
@@ -40,7 +36,7 @@ export function CtaBand({
               asChild
               size="lg"
               variant="outline"
-              className="border-current bg-transparent hover:bg-black/5"
+              className="border-current bg-transparent text-highlight-foreground hover:bg-black/5 hover:text-highlight-foreground dark:border-current dark:bg-transparent dark:hover:bg-black/5"
             >
               <Link href={secondary.href as Route}>{secondary.label}</Link>
             </Button>

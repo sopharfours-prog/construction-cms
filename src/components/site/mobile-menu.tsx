@@ -22,14 +22,20 @@ type Item = { href: string; label: string };
 export function MobileMenu({
   items,
   cta,
+  secondary,
   title,
   labels,
+  search,
   children,
 }: {
   items: Item[];
   cta: Item;
+  /** Extra action under the main one (registration). */
+  secondary?: Item | null;
   title: string;
   labels: { openMenu: string; mainNav: string };
+  /** Shown above the links (the site search). */
+  search?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -46,6 +52,7 @@ export function MobileMenu({
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription className="sr-only">{labels.mainNav}</SheetDescription>
         </SheetHeader>
+        {search ? <div className="px-4 pb-2">{search}</div> : null}
         <nav aria-label={labels.mainNav} className="grid gap-1 px-4">
           {items.map((item) => {
             const active =
@@ -74,6 +81,11 @@ export function MobileMenu({
               {cta.label}
             </Link>
           </Button>
+          {secondary ? (
+            <Button asChild size="lg" variant="outline">
+              <Link href={secondary.href as Route}>{secondary.label}</Link>
+            </Button>
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>

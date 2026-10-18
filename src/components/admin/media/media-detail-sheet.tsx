@@ -64,7 +64,16 @@ const usageHref: Record<Detail["usage"][number]["type"], (id: string) => string 
   team: () => null,
   certification: () => null,
   avatar: () => null,
+  // The usage id is the settings field: the share image is under SEO, logo and favicon under General.
+  settings: (field) =>
+    field === "ogImageMediaId" ? "/admin/settings/seo" : "/admin/settings/general",
 };
+
+/** Settings usage carries the field name; show it in the admin's language. */
+function usageSettingsLabel(field: string, m: AdminMessages["media"]) {
+  const labels: Record<string, string> = m.usageSettings;
+  return labels[field] ?? field;
+}
 
 export function MediaDetailSheet({ mediaId, onClose, folders, can, locale, labels }: Props) {
   const router = useRouter();
@@ -310,7 +319,7 @@ export function MediaDetailSheet({ mediaId, onClose, folders, can, locale, label
                         <span className="text-muted-foreground">{m.usage[u.type]}: </span>
                         {href ? (
                           <Link href={href as Route} className="hover:underline">
-                            {u.label}
+                            {u.type === "settings" ? usageSettingsLabel(u.id, m) : u.label}
                           </Link>
                         ) : (
                           u.label
@@ -391,7 +400,7 @@ export function MediaDetailSheet({ mediaId, onClose, folders, can, locale, label
               <AlertDialogCancel disabled={deleting}>{c.cancel}</AlertDialogCancel>
               <AlertDialogAction
                 disabled={deleting}
-                className="bg-destructive text-white hover:bg-destructive/90"
+                variant="destructive"
                 onClick={(e) => {
                   e.preventDefault();
                   remove();

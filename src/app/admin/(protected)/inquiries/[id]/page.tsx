@@ -14,7 +14,9 @@ import {
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { localeConfig, isLocale } from "@/config/i18n";
+import { NotificationsSync } from "@/components/admin/shell/notifications-sync";
 import { getAdminMessages } from "@/i18n/admin";
+import { markRequestRead } from "@/server/services/notifications";
 import { getAdminLocale } from "@/i18n/admin-locale";
 import { hasPermission, requirePermission } from "@/lib/auth/session";
 import { formatDateTime } from "@/lib/format";
@@ -35,15 +37,18 @@ export default async function InquiryPage({ params }: PageProps<"/admin/inquirie
   const r = t.requests;
   const [inquiry, staff] = await Promise.all([getInquiry(id), listAssignableStaff("inquiry")]);
   if (!inquiry) notFound();
+  // Opened by staff: no longer unread (leaves the bell; the status is unchanged).
+  await markRequestRead("inquiry", inquiry.id);
   const canUpdate = hasPermission(user, "inquiries.update");
 
   return (
     <>
+      <NotificationsSync />
       <AdminPageHeader
         title={inquiry.subject}
         description={`${t.inquiries.detailTitle} · ${formatDateTime(inquiry.createdAt, locale)}`}
       />
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="grid content-start gap-6 lg:col-span-2">
           <Card>
             <CardHeader className="flex-row items-center justify-between gap-2">
@@ -120,8 +125,8 @@ export default async function InquiryPage({ params }: PageProps<"/admin/inquirie
                 rows={[
                   [r.columns.from, inquiry.name],
                   [r.email, inquiry.email],
-                  ["☎", inquiry.phone],
-                  ["🏢", inquiry.company],
+                  [r.phone, inquiry.phone],
+                  [r.company, inquiry.company],
                   [
                     r.language,
                     inquiry.locale && isLocale(inquiry.locale)

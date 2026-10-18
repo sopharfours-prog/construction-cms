@@ -1,8 +1,8 @@
-import { InboxIcon, PaperclipIcon } from "lucide-react";
+import { InboxIcon, MessageSquareReplyIcon, PaperclipIcon } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { PaginationNav } from "@/components/admin/data/pagination-nav";
+import { RowAction, RowCoverLink, rowLinkClass } from "@/components/admin/data/row-link";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { RequestListToolbar } from "@/components/admin/requests/request-list-toolbar";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -20,6 +20,7 @@ import { getAdminMessages } from "@/i18n/admin";
 import { getAdminLocale } from "@/i18n/admin-locale";
 import { requirePermission } from "@/lib/auth/session";
 import { formatNumber, formatRelative } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { inquiryStatuses, listAssignableStaff } from "@/server/services/requests/common";
 import { inquiryListSchema, listInquiries } from "@/server/services/requests/queries";
 
@@ -72,8 +73,9 @@ export default async function InquiriesPage({ searchParams }: PageProps<"/admin/
                     <TableHead>{r.columns.subject}</TableHead>
                     <TableHead>{r.columns.status}</TableHead>
                     <TableHead className="hidden md:table-cell">{r.columns.assignee}</TableHead>
-                    <TableHead className="hidden pr-4 sm:table-cell">
-                      {r.columns.received}
+                    <TableHead className="hidden sm:table-cell">{r.columns.received}</TableHead>
+                    <TableHead className="pr-4">
+                      <span className="sr-only">{r.respond}</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -81,15 +83,22 @@ export default async function InquiriesPage({ searchParams }: PageProps<"/admin/
                   {rows.map((row) => (
                     <TableRow
                       key={row.id}
-                      className={row.status === "NEW" ? "font-medium" : undefined}
+                      className={cn(
+                        rowLinkClass,
+                        row.status === "NEW" && "font-medium",
+                        // Unread: light blue until someone on staff opens it.
+                        !row.staffReadAt &&
+                          "bg-info/10 hover:bg-info/15 dark:bg-info/15 dark:hover:bg-info/20",
+                      )}
                     >
                       <TableCell className="max-w-56 pl-4">
-                        <Link
+                        <RowCoverLink
                           href={`/admin/inquiries/${row.id}`}
-                          className="block truncate hover:underline"
+                          accessible={false}
+                          className="block truncate"
                         >
                           {row.name}
-                        </Link>
+                        </RowCoverLink>
                         <p className="truncate text-xs font-normal text-muted-foreground">
                           {row.company ?? row.email}
                         </p>
@@ -115,8 +124,17 @@ export default async function InquiriesPage({ searchParams }: PageProps<"/admin/
                       <TableCell className="hidden text-sm font-normal md:table-cell">
                         {row.assignedTo?.name ?? "—"}
                       </TableCell>
-                      <TableCell className="hidden pr-4 text-sm font-normal whitespace-nowrap text-muted-foreground sm:table-cell">
+                      <TableCell className="hidden text-sm font-normal whitespace-nowrap text-muted-foreground sm:table-cell">
                         {formatRelative(row.createdAt, locale)}
+                      </TableCell>
+                      <TableCell className="pr-4 text-right">
+                        <RowAction
+                          href={`/admin/inquiries/${row.id}`}
+                          label={r.respond}
+                          name={`${r.respond}: ${row.name}${row.status === "NEW" ? ` (${t.status.inquiry.NEW})` : ""}`}
+                          icon={MessageSquareReplyIcon}
+                          urgent={row.status === "NEW"}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}

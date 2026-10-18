@@ -89,7 +89,7 @@ export default async function NewsArticlePage({ params }: Props) {
         {news.category ? (
           <Link
             href={`${base}?category=${news.category.slug}` as Route}
-            className="text-sm font-semibold tracking-widest text-highlight uppercase hover:underline"
+            className="text-sm font-semibold tracking-widest text-highlight-ink uppercase hover:underline"
           >
             {news.category.name}
           </Link>
@@ -144,7 +144,7 @@ export default async function NewsArticlePage({ params }: Props) {
         <section className="bg-muted/50 py-16" aria-labelledby="more-news">
           <div className="container-site">
             <SectionHeading title={n.latest} id="more-news" />
-            <div className="grid gap-10 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
               {news.more.map((item) => (
                 <NewsCard key={item.slug} news={item} locale={locale} t={t.public} />
               ))}

@@ -27,6 +27,19 @@ datasource db {
 enum UserStatus {
   ACTIVE
   DISABLED
+  /// Asked for an account through the public registration form. Cannot sign in
+  /// until an administrator assigns a role and activates the account.
+  PENDING
+}
+
+enum ChatStatus {
+  OPEN
+  CLOSED
+}
+
+enum ChatSender {
+  VISITOR
+  STAFF
 }
 
 /// Publication state shared by projects, services, news and pages.
@@ -129,6 +142,8 @@ model User {
   roleId              String     @map("role_id") @db.Uuid
   avatarId            String?    @map("avatar_id") @db.Uuid
   lastLoginAt         DateTime?  @map("last_login_at")
+  /// For PENDING registration requests: first opened by an administrator (clears the bell).
+  requestSeenAt       DateTime?  @map("request_seen_at")
   failedLoginAttempts Int        @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime?  @map("locked_until")
   /// Incremented to invalidate every existing session (password change, disable, role change).
@@ -150,6 +165,8 @@ model User {
   assignedQuotes      QuoteRequest[]       @relation("QuoteAssignee")
   inquiryNotes        InquiryNote[]
   quoteNotes          QuoteNote[]
+  assignedChats       ChatConversation[]   @relation("ChatAssignee")
+  chatMessages        ChatMessage[]
   settingsUpdated     Setting[]
   auditLogs           AuditLog[]
 
@@ -703,6 +720,8 @@ model Inquiry {
   ipAddress    String?       @map("ip_address") @db.VarChar(45)
   userAgent    String?       @map("user_agent") @db.VarChar(512)
   repliedAt    DateTime?     @map("replied_at")
+  /// First opened by someone on staff; until then it is unread (bell, light blue row).
+  staffReadAt  DateTime?     @map("staff_read_at")
   archivedAt   DateTime?     @map("archived_at")
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
@@ -769,6 +788,8 @@ model QuoteRequest {
   assignedToId      String?     @map("assigned_to_id") @db.Uuid
   ipAddress         String?     @map("ip_address") @db.VarChar(45)
   userAgent         String?     @map("user_agent") @db.VarChar(512)
+  /// First opened by someone on staff; until then it is unread (bell, light blue row).
+  staffReadAt       DateTime?   @map("staff_read_at")
   archivedAt        DateTime?   @map("archived_at")
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
@@ -818,6 +839,52 @@ model QuoteNote {
 /// Website settings grouped by key ("general", "contact", "social", "seo",
 /// "appearance", "language"). Each value is validated by a Zod schema in code.
 /// Translatable values are stored as { "lo": "...", "en": "..." } objects.
+/// Live chat from the website's chat bubble. The visitor is identified only by a
+/// random token kept in an httpOnly cookie; the database stores its SHA-256.
+model ChatConversation {
+  id                   String     @id @default(uuid(7)) @db.Uuid
+  visitorName          String     @map("visitor_name") @db.VarChar(120)
+  /// Email or phone number, so staff can follow up after the visitor leaves.
+  visitorContact       String     @map("visitor_contact") @db.VarChar(254)
+  visitorTokenHash     String     @unique @map("visitor_token_hash") @db.VarChar(64)
+  status               ChatStatus @default(OPEN)
+  /// Language the visitor used, so staff can reply in kind.
+  locale               String?    @db.VarChar(10)
+  assignedToId         String?    @map("assigned_to_id") @db.Uuid
+  /// Newest visitor message; unread for staff while it is after staffReadAt.
+  lastVisitorMessageAt DateTime   @default(now()) @map("last_visitor_message_at")
+  staffReadAt          DateTime?  @map("staff_read_at")
+  lastMessageAt        DateTime   @default(now()) @map("last_message_at")
+  ipAddress            String?    @map("ip_address") @db.VarChar(45)
+  userAgent            String?    @map("user_agent") @db.VarChar(512)
+  closedAt             DateTime?  @map("closed_at")
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
+
+  assignedTo User?         @relation("ChatAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages   ChatMessage[]
+
+  @@index([status, lastMessageAt(sort: Desc)])
+  @@index([assignedToId])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String     @id @default(uuid(7)) @db.Uuid
+  conversationId String     @map("conversation_id") @db.Uuid
+  sender         ChatSender
+  /// Staff member who wrote it; null for visitor messages.
+  authorId       String?    @map("author_id") @db.Uuid
+  body           String     @db.Text
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author       User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@map("chat_messages")
+}
+
 model Setting {
   key         String   @id @db.VarChar(64)
   value       Json

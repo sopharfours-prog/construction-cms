@@ -169,7 +169,7 @@ export default function StyleguidePage() {
       </Section>
 
       <Section title="Form controls">
-        <div className="grid max-w-3xl gap-6 md:grid-cols-2">
+        <div className="grid max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
           <div className="grid gap-2">
             <Label htmlFor="sg-name">Full name</Label>
             <Input id="sg-name" placeholder="Somchai Phommachanh" autoComplete="name" />
@@ -249,7 +249,7 @@ export default function StyleguidePage() {
       </Section>
 
       <Section title="Cards, loading and empty states">
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <Card>
             <CardHeader>
               <CardTitle>New inquiries</CardTitle>

@@ -74,6 +74,8 @@ export const settingsFormSchemas = {
     description: localized(500),
     logoMediaId: optionalUuid,
     faviconMediaId: optionalUuid,
+    heroImageMediaId: optionalUuid,
+    aboutImageMediaId: optionalUuid,
     foundedYear: intOrNull(2100).refine((v) => v === null || v >= 1900, { message: "invalid" }),
   }),
   contact: z.object({

@@ -26,7 +26,7 @@ export const certificationSchema = z
     expiresAt: optionalDate,
     status,
     translations: translationsSchema(
-      { name: titleField(200), issuer: optionalText(200), description: optionalText(1000) },
+      { name: titleField(200), issuer: optionalText(200), description: optionalText(500) },
       "name",
     ),
   })

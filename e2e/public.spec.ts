@@ -20,15 +20,25 @@ test.describe("public website", () => {
     }
   });
 
-  test("switches language and keeps the page", async ({ page, isMobile }) => {
+  test("switches language and keeps the page", async ({ page }) => {
+    // The language menu (current flag) sits in the header on every screen size.
     await page.goto("/lo/projects");
-    if (isMobile) await page.getByRole("button", { name: "ເປີດເມນູ" }).click();
     await page
-      .getByRole("link", { name: /Read this page in English/ })
-      .first()
+      .getByRole("banner")
+      .getByRole("button", { name: /ພາສາລາວ/ })
       .click();
+    // Entries of an open menu are menu items (each still a link to the page in that language).
+    await page.getByRole("menuitem", { name: /Read this page in English/ }).click();
     await expect(page).toHaveURL(/\/en\/projects$/);
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  });
+
+  test("searches the website from the home page", async ({ page }) => {
+    await page.goto("/en");
+    await page.getByRole("main").getByLabel("Search the website").fill("bridge");
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/en\/search\?q=bridge$/);
+    await expect(page.getByRole("heading", { name: /results? for “bridge”/ })).toBeVisible();
   });
 
   test("filters projects through the URL", async ({ page }) => {

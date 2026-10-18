@@ -19,7 +19,34 @@ privately to the site owner (see "Reporting" below), not in public issues.
   (session version).
 - Brute force: 5 failed attempts per email lock sign-in for 15 minutes (same
   answer whether or not the account exists); 20 attempts per IP per 15 minutes.
-  Counters are in PostgreSQL, so they hold across instances.
+  Counters are in PostgreSQL, so they hold across instances. A lock blocks new
+  sign-ins only: it never ends a session that is already signed in, so nobody
+  can sign a colleague out by typing wrong passwords for their email.
+- Registration: the public "Register" form only creates a request. The account
+  is stored as awaiting approval, sign-in refuses it, and an administrator must
+  choose a role and activate it (or delete it). The form has a honeypot, a
+  timing token, a limit of 5 requests per IP per hour and a cap of 50 waiting
+  requests, and answers the same whether or not the email is already
+  registered. `ALLOW_REGISTRATION=false` switches it off.
+- Live chat: a visitor is identified only by a random 256-bit token in an
+  httpOnly, `SameSite=Lax` cookie scoped to `/api/chat`; the database stores
+  its SHA-256, so a visitor can read and write only their own conversation
+  and a database leak can't be replayed. Starting a chat needs the signed form
+  token and passes the honeypot; limits are 5 new chats per hour per
+  connection, 60 messages per 10 minutes per connection and 20 per 5 minutes
+  per conversation; messages are at most 2,000 characters (also a database
+  CHECK). Staff replies never reveal the staff member's name or email to the
+  visitor. Replies, assignment, closing and deletion are audited.
+  `ALLOW_CHAT=false` removes the bubble and the endpoints answer 404.
+- Own profile ("My profile", also linked from the public site's account
+  menu): every user can change their own name, language and photo; email,
+  role and status remain administrator-only. The account is taken from the
+  session, never from the request. Photos are images only (5 MB), re-encoded
+  without metadata, and count towards the upload limit; changes are audited.
+  `GET /api/account/me` gives the public site only a name and photo, never
+  cached.
+- Own password: on the same page. The current password is required (5 wrong
+  tries per 15 minutes), and the change ends all of that user's sessions.
 - Password reset: single-use link valid 30 minutes, stored only as a SHA-256
   hash; the public "forgot password" form never reveals whether an email exists.
 

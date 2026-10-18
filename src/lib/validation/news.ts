@@ -27,13 +27,11 @@ export const newsInputSchema = z
       "title",
     ),
   })
+  // A time in the past is checked by the news service, which knows whether the
+  // article was already scheduled for that time (then it is live, and fine).
   .superRefine((value, ctx) => {
-    if (value.status === "SCHEDULED") {
-      if (!value.publishedAt)
-        ctx.addIssue({ code: "custom", path: ["publishedAt"], message: "scheduleNeedsDate" });
-      else if (value.publishedAt.getTime() <= Date.now())
-        ctx.addIssue({ code: "custom", path: ["publishedAt"], message: "scheduleInPast" });
-    }
+    if (value.status === "SCHEDULED" && !value.publishedAt)
+      ctx.addIssue({ code: "custom", path: ["publishedAt"], message: "scheduleNeedsDate" });
   });
 
 export type NewsInput = z.output<typeof newsInputSchema>;

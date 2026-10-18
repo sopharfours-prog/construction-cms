@@ -86,6 +86,34 @@ describe("website settings", () => {
     ).rejects.toMatchObject({ field: "ogImageMediaId", messageKey: "mediaInvalid" });
   });
 
+  it("keeps images used by settings from being deleted in the media library", async () => {
+    const { deleteMedia, getMediaUsage } = await import("@/server/services/media/media");
+    const imageId = randomUUID();
+    await db.media.create({
+      data: {
+        id: imageId,
+        kind: "IMAGE",
+        filename: "og.png",
+        originalName: "og.png",
+        mimeType: "image/png",
+        size: 1,
+        storageKey: `public/media/2026/09/${imageId}.png`,
+        url: "/og.png",
+      },
+    });
+    const seo = (await db.setting.findUniqueOrThrow({ where: { key: "seo" } })).value as object;
+    try {
+      await updateSettings("seo", { ...seo, ogImageMediaId: imageId } as never, ctx);
+      expect(await getMediaUsage(imageId, "en")).toEqual([
+        { type: "settings", id: "ogImageMediaId", label: "ogImageMediaId" },
+      ]);
+      await expect(deleteMedia(imageId, ctx)).rejects.toMatchObject({ messageKey: "mediaInUse" });
+    } finally {
+      await db.setting.update({ where: { key: "seo" }, data: { value: seo } });
+      await db.media.delete({ where: { id: imageId } });
+    }
+  });
+
   it("switches languages but never the main one", async () => {
     await expect(setLanguageEnabled("lo", false, ctx)).rejects.toMatchObject({
       messageKey: "defaultLanguageRequired",

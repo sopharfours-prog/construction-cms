@@ -1,9 +1,11 @@
 import { EyeIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { SettingsForms, type SettingsValues } from "@/components/admin/settings/settings-forms";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { type SettingsSection, settingsSections } from "@/config/admin-nav";
 import { defaultBrand } from "@/config/brand";
 import { getAdminMessages } from "@/i18n/admin";
 import { getAdminLocale } from "@/i18n/admin-locale";
@@ -13,12 +15,24 @@ import { pickedMediaSelect } from "@/server/services/media/media";
 import { getSetting } from "@/server/services/settings";
 import { listLanguages } from "@/server/services/site-settings";
 
-export async function generateMetadata(): Promise<Metadata> {
-  return { title: getAdminMessages(await getAdminLocale()).settings.title };
+const isSection = (value: string): value is SettingsSection =>
+  (settingsSections as readonly string[]).includes(value);
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/admin/settings/[section]">): Promise<Metadata> {
+  const { section } = await params;
+  const t = getAdminMessages(await getAdminLocale()).settings;
+  return { title: isSection(section) ? `${t.tabs[section]} · ${t.title}` : t.title };
 }
 
-export default async function SettingsPage() {
+/** One Website Settings section, chosen in the sidebar's Settings sub-menu. */
+export default async function SettingsSectionPage({
+  params,
+}: PageProps<"/admin/settings/[section]">) {
   const user = await requirePermission("settings.view");
+  const { section } = await params;
+  if (!isSection(section)) notFound();
   const t = getAdminMessages(await getAdminLocale());
   const [general, contact, social, seo, appearance, statistics, languages] = await Promise.all([
     getSetting("general"),
@@ -29,9 +43,13 @@ export default async function SettingsPage() {
     getSetting("statistics"),
     listLanguages(),
   ]);
-  const mediaIds = [general?.logoMediaId, general?.faviconMediaId, seo?.ogImageMediaId].filter(
-    (id): id is string => Boolean(id),
-  );
+  const mediaIds = [
+    general?.logoMediaId,
+    general?.faviconMediaId,
+    general?.heroImageMediaId,
+    general?.aboutImageMediaId,
+    seo?.ogImageMediaId,
+  ].filter((id): id is string => Boolean(id));
   const media = new Map(
     (
       await db.media.findMany({
@@ -49,6 +67,8 @@ export default async function SettingsPage() {
       description: general?.description ?? {},
       logo: pick(general?.logoMediaId),
       favicon: pick(general?.faviconMediaId),
+      heroImage: pick(general?.heroImageMediaId),
+      aboutImage: pick(general?.aboutImageMediaId),
       foundedYear: general?.foundedYear ?? null,
     },
     contact: {
@@ -88,14 +108,14 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <AdminPageHeader title={t.settings.title} description={t.settings.description} />
+      <AdminPageHeader title={t.settings.tabs[section]} description={t.settings.title} />
       {!canEdit ? (
         <Alert className="mb-6">
           <EyeIcon aria-hidden="true" />
           <AlertDescription>{t.settings.readOnly}</AlertDescription>
         </Alert>
       ) : null}
-      <SettingsForms values={values} canEdit={canEdit} labels={t} />
+      <SettingsForms section={section} values={values} canEdit={canEdit} labels={t} />
     </>
   );
 }

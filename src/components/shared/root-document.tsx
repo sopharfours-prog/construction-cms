@@ -15,11 +15,14 @@ export function RootDocument({
   children,
   brand,
   defaultTheme = "light",
+  nonce,
 }: {
   lang: string;
   children: React.ReactNode;
   brand?: unknown;
   defaultTheme?: "light" | "dark" | "system";
+  /** CSP nonce for the inline theme script, where the policy has no 'unsafe-inline' (the CMS). */
+  nonce?: string;
 }) {
   return (
     <html
@@ -38,6 +41,7 @@ export function RootDocument({
           defaultTheme={defaultTheme}
           enableSystem
           disableTransitionOnChange
+          nonce={nonce}
         >
           {children}
           <Toaster position="top-right" richColors closeButton />

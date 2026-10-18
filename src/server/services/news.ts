@@ -129,6 +129,26 @@ async function assertSlugFree(slug: string, exceptId?: string) {
 }
 
 /** PUBLISHED without a date gets "now"; drafts keep no date. */
+const toMinute = (date: Date) => Math.floor(date.getTime() / 60_000);
+
+/**
+ * Scheduling needs a future time. Only a new or changed schedule is checked:
+ * an article whose scheduled time has passed is already live, and editing it
+ * (fixing a typo, adding a photo) keeps that time. The form sends minutes.
+ */
+function assertScheduleInFuture(
+  input: NewsInput,
+  existing: { status: string; publishedAt: Date | null } | null,
+) {
+  if (input.status !== "SCHEDULED" || !input.publishedAt) return;
+  if (input.publishedAt.getTime() > Date.now()) return;
+  const unchanged =
+    existing?.status === "SCHEDULED" &&
+    existing.publishedAt !== null &&
+    toMinute(existing.publishedAt) === toMinute(input.publishedAt);
+  if (!unchanged) throw new ContentError("validation", "publishedAt", "scheduleInPast");
+}
+
 function resolvePublishedAt(input: NewsInput, previous: Date | null): Date | null {
   if (input.status === "DRAFT") return null;
   if (input.status === "PUBLISHED") return input.publishedAt ?? previous ?? new Date();
@@ -162,6 +182,7 @@ const auditAction = (from: string, to: string) =>
 
 export async function createNews(input: NewsInput, ctx: ActionContext) {
   assertPublishAllowed(ctx, null, input.status);
+  assertScheduleInFuture(input, null);
   await assertSlugFree(input.slug);
   if (input.coverImageId) await assertImages([input.coverImageId], "coverImageId");
   if (input.seoImageId) await assertImages([input.seoImageId], "seoImageId");
@@ -206,10 +227,16 @@ export async function updateNews(id: string, input: NewsInput, ctx: ActionContex
   });
   if (!existing) throw new ContentError("notFound");
   assertPublishAllowed(ctx, existing.status, input.status);
+  if (hasPermission(ctx.user, "news.publish")) assertScheduleInFuture(input, existing);
   await assertSlugFree(input.slug, id);
   if (input.coverImageId) await assertImages([input.coverImageId], "coverImageId");
   if (input.seoImageId) await assertImages([input.seoImageId], "seoImageId");
   const locales = presentLocales(input.translations);
+  // Without news.publish the status can't change (checked above), and neither can
+  // the publication date: a future date would take a live article off the website.
+  const publishedAt = hasPermission(ctx.user, "news.publish")
+    ? resolvePublishedAt(input, existing.publishedAt)
+    : existing.publishedAt;
 
   return db.$transaction(async (tx) => {
     const news = await tx.news.update({
@@ -220,7 +247,7 @@ export async function updateNews(id: string, input: NewsInput, ctx: ActionContex
         seoImageId: input.seoImageId,
         categoryId: input.categoryId,
         status: input.status,
-        publishedAt: resolvePublishedAt(input, existing.publishedAt),
+        publishedAt,
       },
     });
     await tx.newsTranslation.deleteMany({ where: { newsId: id, locale: { notIn: locales } } });

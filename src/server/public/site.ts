@@ -6,6 +6,8 @@ import { defaultLocale, type Locale } from "@/config/i18n";
 import { db } from "@/lib/db/client";
 import { getServerEnv } from "@/lib/env/server";
 import { pickTranslation } from "@/server/services/content/translations";
+import { isRegistrationOpen } from "@/server/services/auth/registration";
+import { isChatOpen } from "@/server/services/chat";
 import { getSetting } from "@/server/services/settings";
 
 /** Localized text from a settings value, falling back to the default language. */
@@ -13,6 +15,20 @@ export const localized = (
   value: Partial<Record<Locale, string>> | undefined | null,
   locale: Locale,
 ) => value?.[locale] || value?.[defaultLocale] || "";
+
+const DEFAULT_FAVICON = { url: "/favicon.ico", type: "image/x-icon" };
+
+/** Browser-tab icon: the image chosen in Website Settings, else the bundled one. */
+export const getFavicon = cache(async () => {
+  const id = (await getSetting("general"))?.faviconMediaId;
+  const media = id
+    ? await db.media.findFirst({
+        where: { id, deletedAt: null, kind: "IMAGE" },
+        select: { url: true, mimeType: true },
+      })
+    : null;
+  return media ? { url: media.url, type: media.mimeType } : DEFAULT_FAVICON;
+});
 
 /** Company details shown in the header and footer of every public page. */
 export const getSiteShell = cache(async (locale: Locale) => {
@@ -29,7 +45,7 @@ export const getSiteShell = cache(async (locale: Locale) => {
     }),
   ]);
   const mediaSelect = { url: true, width: true, height: true, altText: true } as const;
-  const [logo, ogImage] = await Promise.all([
+  const [logo, ogImage, favicon] = await Promise.all([
     general?.logoMediaId
       ? db.media.findFirst({
           where: { id: general.logoMediaId, deletedAt: null },
@@ -42,6 +58,7 @@ export const getSiteShell = cache(async (locale: Locale) => {
           select: mediaSelect,
         })
       : null,
+    getFavicon(),
   ]);
 
   return {
@@ -49,6 +66,11 @@ export const getSiteShell = cache(async (locale: Locale) => {
     tagline: localized(general?.tagline, locale),
     description: localized(general?.description, locale),
     logo,
+    favicon,
+    /** Whether the public "Register" button (staff account requests) is shown. */
+    registrationOpen: isRegistrationOpen(),
+    /** Whether the live chat bubble is shown (ALLOW_CHAT). */
+    chatOpen: isChatOpen(),
     foundedYear: general?.foundedYear ?? null,
     seo: {
       title: localized(seo?.defaultTitle, locale),

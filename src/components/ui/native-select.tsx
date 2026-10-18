@@ -8,8 +8,10 @@ function NativeSelect({
   ...props
 }: Omit<React.ComponentProps<"select">, "size"> & { size?: "sm" | "default" }) {
   return (
+    // Content-width by default; a select given w-full makes its wrapper full width
+    // too, or the class would only fill this shrink-wrapped box.
     <div
-      className="group/native-select relative w-fit has-[select:disabled]:opacity-50"
+      className="group/native-select relative w-fit has-[select:disabled]:opacity-50 has-[>select.w-full]:w-full"
       data-slot="native-select-wrapper"
     >
       <select

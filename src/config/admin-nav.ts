@@ -20,7 +20,9 @@ export type AdminNavIcon =
   | "scroll-text"
   | "settings"
   | "tags"
-  | "shield";
+  | "shield"
+  | "circle-user"
+  | "messages-square";
 
 export type AdminNavItemKey =
   | "dashboard"
@@ -32,20 +34,36 @@ export type AdminNavItemKey =
   | "taxonomy"
   | "inquiries"
   | "quotes"
+  | "chats"
   | "users"
   | "roles"
   | "auditLogs"
-  | "settings";
+  | "settings"
+  | "account";
 
 export type AdminNavGroupKey = "overview" | "content" | "customers" | "system";
+
+/** Website Settings sections, each its own page at /admin/settings/<section>. */
+export const settingsSections = [
+  "general",
+  "contact",
+  "social",
+  "seo",
+  "appearance",
+  "statistics",
+  "languages",
+] as const;
+export type SettingsSection = (typeof settingsSections)[number];
 
 export type AdminNavItemDef = {
   key: AdminNavItemKey;
   href: string;
   icon: AdminNavIcon;
-  /** Shown only to users holding this permission. */
-  permission: PermissionKey;
+  /** Shown only to users holding this permission; null for every signed-in user. */
+  permission: PermissionKey | null;
   ready: boolean;
+  /** Sub-menu under the item; same permission as the item. */
+  children?: readonly { key: SettingsSection; href: string }[];
 };
 
 export const adminNav: readonly { key: AdminNavGroupKey; items: readonly AdminNavItemDef[] }[] = [
@@ -125,6 +143,13 @@ export const adminNav: readonly { key: AdminNavGroupKey; items: readonly AdminNa
         permission: "quotes.view",
         ready: true,
       },
+      {
+        key: "chats",
+        href: "/admin/chats",
+        icon: "messages-square",
+        permission: "chats.view",
+        ready: true,
+      },
     ],
   },
   {
@@ -150,6 +175,15 @@ export const adminNav: readonly { key: AdminNavGroupKey; items: readonly AdminNa
         href: "/admin/settings",
         icon: "settings",
         permission: "settings.view",
+        ready: true,
+        children: settingsSections.map((key) => ({ key, href: `/admin/settings/${key}` })),
+      },
+      // One's own profile and password: no permission needed.
+      {
+        key: "account",
+        href: "/admin/account",
+        icon: "circle-user",
+        permission: null,
         ready: true,
       },
     ],

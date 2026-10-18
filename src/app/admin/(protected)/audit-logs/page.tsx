@@ -83,7 +83,7 @@ async function AuditLogContent({ filters, locale }: { filters: AuditFilters; loc
             method="get"
             role="search"
             aria-label={a.filters}
-            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]"
           >
             <div className="grid gap-1.5">
               <Label htmlFor="audit-q" className="sr-only">

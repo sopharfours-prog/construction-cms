@@ -45,13 +45,13 @@ export function GalleryEditor({ name, defaultValue, labels, max = 60 }: Props) {
         {items.map((item, index) => (
           <li
             key={item.media.id}
-            className="grid gap-3 rounded-md border p-3 sm:grid-cols-[8rem_1fr_auto]"
+            className="grid grid-cols-1 gap-3 rounded-md border p-3 sm:grid-cols-[8rem_1fr_auto]"
           >
             <input type="hidden" name={`${name}.${index}.mediaId`} value={item.media.id} />
             <MediaThumb media={item.media} sizes="128px" className="w-32 rounded" />
             <div className="grid gap-2">
               {locales.map((locale) => (
-                <div key={locale} className="grid gap-2 sm:grid-cols-2" lang={locale}>
+                <div key={locale} className="grid grid-cols-1 gap-2 sm:grid-cols-2" lang={locale}>
                   <Input
                     name={`${name}.${index}.translations.${locale}.altText`}
                     defaultValue={item.translations[locale]?.altText ?? ""}

@@ -108,14 +108,35 @@ export type MediaUsage = {
     | "page"
     | "team"
     | "certification"
-    | "avatar";
+    | "avatar"
+    | "settings";
   id: string;
   label: string;
 };
 
+/** Website Settings fields that hold a media id (logo, favicon, share image). */
+const settingsMediaFields = {
+  general: ["logoMediaId", "faviconMediaId", "heroImageMediaId", "aboutImageMediaId"],
+  seo: ["ogImageMediaId"],
+} as const;
+
+/** Settings groups whose stored value points at this file (settings are JSON, not foreign keys). */
+async function getSettingsUsage(id: string): Promise<string[]> {
+  const rows = await db.setting.findMany({
+    where: { key: { in: Object.keys(settingsMediaFields) } },
+    select: { key: true, value: true },
+  });
+  return rows.flatMap((row) => {
+    const value = row.value as Record<string, unknown> | null;
+    const fields = settingsMediaFields[row.key as keyof typeof settingsMediaFields] ?? [];
+    return fields.filter((field) => value?.[field] === id);
+  });
+}
+
 /** Everything that displays this file. Used to block deleting files still in use. */
 export async function getMediaUsage(id: string, locale: Locale): Promise<MediaUsage[]> {
   const title = { select: { locale: true, title: true } } as const;
+  const settings = await getSettingsUsage(id);
   const [projects, gallery, services, news, seo, pages, team, certs, users] = await Promise.all([
     db.project.findMany({
       where: { coverImageId: id, deletedAt: null },
@@ -172,6 +193,7 @@ export async function getMediaUsage(id: string, locale: Locale): Promise<MediaUs
     ...team.map((r) => ({ type: "team" as const, id: r.id, label: n(r) })),
     ...certs.map((r) => ({ type: "certification" as const, id: r.id, label: n(r) })),
     ...users.map((r) => ({ type: "avatar" as const, id: r.id, label: r.name })),
+    ...settings.map((field) => ({ type: "settings" as const, id: field, label: field })),
   ];
 }
 

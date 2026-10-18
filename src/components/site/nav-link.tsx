@@ -23,7 +23,7 @@ export function NavLink({
       href={href as Route}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground",
+        "relative py-2 text-sm font-medium whitespace-nowrap text-foreground/75 transition-colors hover:text-foreground",
         "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-left after:scale-x-0 after:bg-highlight after:transition-transform",
         active && "text-foreground after:scale-x-100",
       )}

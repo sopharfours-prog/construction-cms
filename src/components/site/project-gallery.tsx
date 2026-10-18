@@ -32,7 +32,15 @@ export function ProjectGallery({
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:gap-3">
+      <ul
+        className={
+          total === 1
+            ? "grid max-w-4xl"
+            : total === 2
+              ? "grid grid-cols-2 gap-2 lg:gap-3"
+              : "grid grid-cols-2 gap-2 md:grid-cols-3 lg:gap-3"
+        }
+      >
         {items.map((item, i) => (
           <li key={item.url} className={i === 0 && total > 2 ? "col-span-2 row-span-2" : undefined}>
             <button
@@ -46,9 +54,13 @@ export function ProjectGallery({
                 alt={item.altText || title}
                 fill
                 sizes={
-                  i === 0 && total > 2
-                    ? "(min-width: 768px) 66vw, 100vw"
-                    : "(min-width: 768px) 33vw, 50vw"
+                  total === 1
+                    ? "(min-width: 1024px) 56rem, 100vw"
+                    : i === 0 && total > 2
+                      ? "(min-width: 768px) 66vw, 100vw"
+                      : total === 2
+                        ? "50vw"
+                        : "(min-width: 768px) 33vw, 50vw"
                 }
                 placeholder={item.blurDataUrl ? "blur" : "empty"}
                 blurDataURL={item.blurDataUrl ?? undefined}

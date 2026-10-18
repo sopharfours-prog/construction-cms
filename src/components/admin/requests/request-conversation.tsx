@@ -22,12 +22,12 @@ type Labels = Pick<AdminMessages, "common" | "validation" | "requests">;
 
 function NoteForm({ action, labels }: { action: Action; labels: Labels }) {
   const form = useRef<HTMLFormElement>(null);
-  const { formAction, pending, errorFor } = useActionForm(action, labels, {
+  const { onSubmit, pending, errorFor } = useActionForm(action, labels, {
     successMessage: labels.common.toast.saved,
     onSuccess: () => form.current?.reset(),
   });
   return (
-    <form ref={form} action={formAction} noValidate className="grid gap-3">
+    <form ref={form} onSubmit={onSubmit} noValidate className="grid gap-3">
       <FormField
         id="note-body"
         label={labels.requests.addNote}
@@ -65,7 +65,7 @@ function ReplyForm({
 }) {
   const form = useRef<HTMLFormElement>(null);
   const r = labels.requests;
-  const { formAction, pending, errorFor } = useActionForm(action, labels, {
+  const { onSubmit, pending, errorFor } = useActionForm(action, labels, {
     successMessage: r.sent,
     onSuccess: () => {
       const body = form.current?.elements.namedItem("body");
@@ -73,7 +73,7 @@ function ReplyForm({
     },
   });
   return (
-    <form ref={form} action={formAction} noValidate className="grid gap-3">
+    <form ref={form} onSubmit={onSubmit} noValidate className="grid gap-3">
       <p className="text-xs text-muted-foreground">{fmt(r.replyHint, { email })}</p>
       <FormField id="reply-subject" label={r.replySubject} error={errorFor("subject")}>
         {(a) => <Input {...a} name="subject" defaultValue={defaultSubject} maxLength={200} />}

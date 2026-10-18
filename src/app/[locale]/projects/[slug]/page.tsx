@@ -14,6 +14,7 @@ import { isLocale } from "@/config/i18n";
 import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { formatDate, formatNumber } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { getPublicProject } from "@/server/public/content";
 import { pageMetadata } from "@/lib/seo/metadata";
 import { getEnabledLocales } from "@/server/services/site-settings";
@@ -74,6 +75,10 @@ export default async function ProjectPage({ params }: Props) {
     [f.projectManager, project.projectManager],
   ];
 
+  const hasOverview = Boolean(project.summary) || Boolean(project.description?.content?.length);
+  // Nothing written about the project yet: the facts take the full width
+  // instead of sitting beside an empty column.
+  const hasBody = hasOverview || project.specifications.length > 0;
   const pageUrl = localizedPath(locale, `/projects/${project.slug}`);
   return (
     <article>
@@ -97,7 +102,7 @@ export default async function ProjectPage({ params }: Props) {
           }),
         ]}
       />
-      <header className="relative isolate flex min-h-[60svh] items-end overflow-hidden bg-primary text-primary-foreground">
+      <header className="relative isolate flex min-h-[60svh] items-end overflow-hidden bg-brand text-brand-foreground">
         {project.cover ? (
           <Image
             src={project.cover.url}
@@ -112,12 +117,12 @@ export default async function ProjectPage({ params }: Props) {
         ) : null}
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-gradient-to-t from-primary via-primary/75 to-primary/20"
+          className="absolute inset-0 -z-10 bg-gradient-to-t from-brand via-brand/75 to-brand/20"
         />
         <div className="container-site w-full pt-28 pb-12 lg:pb-16">
           <Breadcrumbs
             label={t.public.breadcrumb}
-            className="mb-8 text-primary-foreground/80"
+            className="mb-8 text-brand-foreground/80"
             items={[
               { href: localizedPath(locale, "/"), label: t.site.nav.home },
               { href: localizedPath(locale, "/projects"), label: p.title },
@@ -131,7 +136,7 @@ export default async function ProjectPage({ params }: Props) {
             {project.title}
           </h1>
           {project.location ? (
-            <p className="mt-5 flex items-center gap-2 text-lg text-primary-foreground/85">
+            <p className="mt-5 flex items-center gap-2 text-lg text-brand-foreground/85">
               <MapPinIcon className="size-5" aria-hidden="true" />
               {project.location}
             </p>
@@ -139,23 +144,32 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       </header>
 
-      <div className="container-site grid gap-12 py-14 lg:grid-cols-[1fr_22rem] lg:py-20">
-        <div className="min-w-0">
-          <h2 className="mb-6 text-2xl type-heading">{p.overview}</h2>
-          {project.summary ? (
-            <p className="mb-8 text-xl leading-relaxed text-foreground">{project.summary}</p>
+      <div
+        className={cn(
+          "container-site grid gap-12 py-14 lg:py-20",
+          hasBody && "lg:grid-cols-[1fr_22rem]",
+        )}
+      >
+        <div className={cn("min-w-0", !hasBody && "hidden")}>
+          {hasOverview ? (
+            <>
+              <h2 className="mb-6 text-2xl type-heading">{p.overview}</h2>
+              {project.summary ? (
+                <p className="mb-8 text-xl leading-relaxed text-foreground">{project.summary}</p>
+              ) : null}
+              <RichText doc={project.description} />
+            </>
           ) : null}
-          <RichText doc={project.description} />
 
           {project.specifications.length ? (
-            <section className="mt-14" aria-labelledby="specs-title">
+            <section className={hasOverview ? "mt-14" : undefined} aria-labelledby="specs-title">
               <h2 id="specs-title" className="mb-5 text-2xl type-heading">
                 {p.specifications}
               </h2>
-              <dl className="grid border-t sm:grid-cols-2">
-                {project.specifications.map((spec) => (
+              <dl className="grid grid-cols-1 border-t sm:grid-cols-2">
+                {project.specifications.map((spec, i) => (
                   <div
-                    key={spec.label}
+                    key={i}
                     className="flex justify-between gap-4 border-b py-3 sm:odd:mr-4 sm:even:ml-4"
                   >
                     <dt className="text-muted-foreground">{spec.label}</dt>
@@ -167,12 +181,15 @@ export default async function ProjectPage({ params }: Props) {
           ) : null}
         </div>
 
-        <aside aria-labelledby="facts-title" className="lg:sticky lg:top-28 lg:self-start">
+        <aside
+          aria-labelledby="facts-title"
+          className={hasBody ? "lg:sticky lg:top-28 lg:self-start" : undefined}
+        >
           <div className="border-t-4 border-highlight bg-muted/60 p-6">
             <h2 id="facts-title" className="mb-4 text-lg type-heading">
               {p.details}
             </h2>
-            <dl className="grid gap-4 text-sm">
+            <dl className={cn("grid gap-4 text-sm", !hasBody && "sm:grid-cols-2 lg:grid-cols-4")}>
               {facts
                 .filter((fact): fact is [string, string] => Boolean(fact[1]))
                 .map(([label, value]) => (
@@ -189,7 +206,7 @@ export default async function ProjectPage({ params }: Props) {
                 <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                   {p.services}
                 </h3>
-                <ul className="grid gap-2">
+                <ul className={cn("grid gap-2", !hasBody && "sm:grid-cols-2 lg:grid-cols-4")}>
                   {project.services.map((s) => (
                     <li key={s.slug}>
                       <Link
@@ -221,7 +238,7 @@ export default async function ProjectPage({ params }: Props) {
         <section className="bg-muted/50 py-16 lg:py-24" aria-labelledby="related-title">
           <div className="container-site">
             <SectionHeading title={p.related} id="related-title" />
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               {project.related.map((r) => (
                 <ProjectCard key={r.slug} project={r} locale={locale} t={t.public} />
               ))}

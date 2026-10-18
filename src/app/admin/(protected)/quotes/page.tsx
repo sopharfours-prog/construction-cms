@@ -1,8 +1,8 @@
-import { FileSpreadsheetIcon } from "lucide-react";
+import { FileSpreadsheetIcon, MessageSquareReplyIcon } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { PaginationNav } from "@/components/admin/data/pagination-nav";
+import { RowAction, RowCoverLink, rowLinkClass } from "@/components/admin/data/row-link";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { RequestListToolbar } from "@/components/admin/requests/request-list-toolbar";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -20,6 +20,7 @@ import { getAdminMessages } from "@/i18n/admin";
 import { getAdminLocale } from "@/i18n/admin-locale";
 import { requirePermission } from "@/lib/auth/session";
 import { formatNumber, formatRelative } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { listAssignableStaff, quoteStatuses } from "@/server/services/requests/common";
 import { listQuotes, quoteListSchema } from "@/server/services/requests/queries";
 
@@ -77,8 +78,9 @@ export default async function QuotesPage({ searchParams }: PageProps<"/admin/quo
                     </TableHead>
                     <TableHead>{r.columns.status}</TableHead>
                     <TableHead className="hidden xl:table-cell">{r.columns.assignee}</TableHead>
-                    <TableHead className="hidden pr-4 sm:table-cell">
-                      {r.columns.received}
+                    <TableHead className="hidden sm:table-cell">{r.columns.received}</TableHead>
+                    <TableHead className="pr-4">
+                      <span className="sr-only">{r.respond}</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -86,12 +88,18 @@ export default async function QuotesPage({ searchParams }: PageProps<"/admin/quo
                   {rows.map((row) => (
                     <TableRow
                       key={row.id}
-                      className={row.status === "NEW" ? "font-medium" : undefined}
+                      className={cn(
+                        rowLinkClass,
+                        row.status === "NEW" && "font-medium",
+                        // Unread: light blue until someone on staff opens it.
+                        !row.staffReadAt &&
+                          "bg-info/10 hover:bg-info/15 dark:bg-info/15 dark:hover:bg-info/20",
+                      )}
                     >
                       <TableCell className="pl-4 font-mono text-sm whitespace-nowrap">
-                        <Link href={`/admin/quotes/${row.id}`} className="hover:underline">
+                        <RowCoverLink href={`/admin/quotes/${row.id}`} accessible={false}>
                           {row.referenceNumber}
-                        </Link>
+                        </RowCoverLink>
                       </TableCell>
                       <TableCell className="max-w-48">
                         <p className="truncate">{row.customerName}</p>
@@ -122,8 +130,17 @@ export default async function QuotesPage({ searchParams }: PageProps<"/admin/quo
                       <TableCell className="hidden text-sm font-normal xl:table-cell">
                         {row.assignedTo?.name ?? "—"}
                       </TableCell>
-                      <TableCell className="hidden pr-4 text-sm font-normal whitespace-nowrap text-muted-foreground sm:table-cell">
+                      <TableCell className="hidden text-sm font-normal whitespace-nowrap text-muted-foreground sm:table-cell">
                         {formatRelative(row.createdAt, locale)}
+                      </TableCell>
+                      <TableCell className="pr-4 text-right">
+                        <RowAction
+                          href={`/admin/quotes/${row.id}`}
+                          label={r.respond}
+                          name={`${r.respond}: ${row.referenceNumber}, ${row.customerName}${row.status === "NEW" ? ` (${t.status.quote.NEW})` : ""}`}
+                          icon={MessageSquareReplyIcon}
+                          urgent={row.status === "NEW"}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}

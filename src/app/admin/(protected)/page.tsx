@@ -8,8 +8,9 @@ import {
   TimerIcon,
   WrenchIcon,
 } from "lucide-react";
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { ProjectStatusChart, RequestsChart } from "@/components/admin/dashboard/charts";
@@ -29,7 +30,8 @@ import {
 import { getAdminMessages } from "@/i18n/admin";
 import { getAdminLocale } from "@/i18n/admin-locale";
 import { fmt } from "@/i18n/format";
-import { type CurrentUser, hasPermission, requirePermission } from "@/lib/auth/session";
+import { getVisibleNav } from "@/lib/admin/nav";
+import { type CurrentUser, hasPermission, requireUser } from "@/lib/auth/session";
 import type { Locale } from "@/config/i18n";
 import { formatBytes, formatNumber, formatRelative } from "@/lib/format";
 import { getDashboardData } from "@/server/services/dashboard";
@@ -39,9 +41,18 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DashboardPage() {
-  const user = await requirePermission("dashboard.view");
+  const user = await requireUser();
   const locale = await getAdminLocale();
-  const d = getAdminMessages(locale).dashboard;
+  const t = getAdminMessages(locale);
+  if (!hasPermission(user, "dashboard.view")) {
+    // /admin is where sign-in lands: send roles without the dashboard to the
+    // first section they can open instead of a 403.
+    const first = getVisibleNav(user.permissions, t.nav)
+      .flatMap((group) => group.items)
+      .find((item) => item.href);
+    redirect((first?.href ?? "/admin/forbidden") as Route);
+  }
+  const d = t.dashboard;
 
   return (
     <>
@@ -122,7 +133,7 @@ async function DashboardContent({ user, locale }: { user: CurrentUser; locale: L
         </section>
       ) : null}
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-5">
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-5">
         {data.monthly ? (
           <Card className="xl:col-span-3">
             <CardHeader>
@@ -161,7 +172,7 @@ async function DashboardContent({ user, locale }: { user: CurrentUser; locale: L
         ) : null}
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
         {data.latestQuotes ? (
           <Card>
             <CardHeader>

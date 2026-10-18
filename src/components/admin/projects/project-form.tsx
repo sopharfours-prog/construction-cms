@@ -74,7 +74,7 @@ export function ProjectForm({ action, initial, options, canPublish, labels }: Pr
   const isNew = !initial;
   const p = labels.projects;
   const c = labels.common;
-  const { formAction, pending, fieldErrors, errorFor } = useActionForm(action, labels, {
+  const { onSubmit, pending, fieldErrors, errorFor } = useActionForm(action, labels, {
     successMessage: isNew ? c.toast.created : c.toast.saved,
     onSuccess: (data) =>
       isNew && data ? router.push(`/admin/projects/${data.id}` as Route) : router.refresh(),
@@ -86,8 +86,8 @@ export function ProjectForm({ action, initial, options, canPublish, labels }: Pr
   ) => (initial?.translations[locale]?.[key] as string | undefined) ?? "";
 
   return (
-    <form action={formAction} noValidate className="grid gap-6">
-      <div className="grid gap-6 xl:grid-cols-3">
+    <form onSubmit={onSubmit} noValidate className="grid gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="grid content-start gap-6 xl:col-span-2">
           <FormSection title={p.sections.content}>
             <TranslationTabs fieldErrors={fieldErrors} labels={c}>
@@ -141,7 +141,7 @@ export function ProjectForm({ action, initial, options, canPublish, labels }: Pr
                         />
                       )}
                     </FormField>
-                    <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                       {(
                         ["location", "client", "architect", "contractor", "projectManager"] as const
                       ).map((key) => (
@@ -317,7 +317,7 @@ export function ProjectForm({ action, initial, options, canPublish, labels }: Pr
           </FormSection>
 
           <FormSection title={p.sections.dates}>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 @xs:grid-cols-2">
               <FormField id="f-startDate" label={p.fields.startDate} error={errorFor("startDate")}>
                 {(a) => (
                   <Input {...a} type="date" name="startDate" defaultValue={initial?.startDate} />
@@ -338,7 +338,7 @@ export function ProjectForm({ action, initial, options, canPublish, labels }: Pr
                 )}
               </FormField>
             </div>
-            <div className="grid grid-cols-[1fr_6rem] gap-2">
+            <div className="grid grid-cols-1 gap-4 @xs:grid-cols-[minmax(0,1fr)_6rem] @xs:gap-2">
               <FormField
                 id="f-budget"
                 label={p.fields.budget}

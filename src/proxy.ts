@@ -13,7 +13,12 @@ const cspOptions = {
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC_ADMIN_PATHS = ["/admin/login", "/admin/forgot-password", "/admin/reset-password"];
+const PUBLIC_ADMIN_PATHS = [
+  "/admin/login",
+  "/admin/register",
+  "/admin/forgot-password",
+  "/admin/reset-password",
+];
 
 /**
  * /admin: first line of defence, redirecting visitors without a valid,
@@ -31,9 +36,9 @@ const adminProxy = auth((request) => {
     loginUrl.searchParams.set("callbackUrl", `${pathname}${search}`);
     return NextResponse.redirect(loginUrl);
   }
-  if (pathname === "/admin/login" && isSignedIn) {
-    return NextResponse.redirect(new URL("/admin", request.nextUrl.origin));
-  }
+  // Signed-in visitors are sent away from /admin/login by the login page, not
+  // here: only the database knows whether this token is still accepted, and
+  // bouncing a revoked session back to /admin would loop forever.
 
   // Per-request nonce: Next.js reads it from the request's CSP header and adds
   // it to its own scripts, so only those scripts may run.

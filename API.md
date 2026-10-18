@@ -112,13 +112,13 @@ Limits: images 20 MB, videos 100 MB, documents (PDF, DOCX, XLSX) 20 MB;
 
 ### Users
 
-| Method | Path             | Permission     | Notes                                                                                                                 |
-| ------ | ---------------- | -------------- | --------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/users`     | `users.view`   | Query: `q`, `role`, `status`, `page`. Never includes password hashes                                                  |
-| POST   | `/api/users`     | `users.create` | `passwordMode`: `email` (send a setup link) or `set` (with `password`, 12+ chars) → `201 { id, needsLink, linkSent }` |
-| GET    | `/api/users/:id` | `users.view`   |                                                                                                                       |
-| PUT    | `/api/users/:id` | `users.update` | `name`, `email`, `roleId`, `status`, `preferredLocale`, `avatarId`                                                    |
-| DELETE | `/api/users/:id` | `users.delete` | Soft delete; frees the email                                                                                          |
+| Method | Path             | Permission     | Notes                                                                                                                                                                                              |
+| ------ | ---------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/users`     | `users.view`   | Query: `q`, `role`, `status` (`ACTIVE`, `DISABLED`, `PENDING`), `page`. Pending account requests come first. Never includes password hashes                                                        |
+| POST   | `/api/users`     | `users.create` | `passwordMode`: `email` (send a setup link) or `set` (with `password`, 12+ chars) → `201 { id, needsLink, linkSent }`                                                                              |
+| GET    | `/api/users/:id` | `users.view`   |                                                                                                                                                                                                    |
+| PUT    | `/api/users/:id` | `users.update` | `name`, `email`, `roleId`, `status`, `preferredLocale`, `avatarId`. A `PENDING` request is approved by setting `status: "ACTIVE"` (the applicant is emailed); nothing can be set back to `PENDING` |
+| DELETE | `/api/users/:id` | `users.delete` | Soft delete; frees the email                                                                                                                                                                       |
 
 You can't assign a role, or change a user who holds permissions, beyond your
 own; you can't disable, delete or demote yourself; the last active Super
@@ -138,16 +138,24 @@ Administrator can't be removed.
 
 ### Public endpoints
 
-| Method | Path              | Notes                                                                                                                                                                                                                                          |
-| ------ | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/form-token` | Anti-spam token for the public forms (valid from 3 s to 24 h)                                                                                                                                                                                  |
-| POST   | `/api/inquiries`  | `multipart/form-data`: `name`, `email`, `phone?`, `company?`, `subject`, `message`, `locale`, `formToken`, `website` (honeypot, leave empty), up to 3 `attachments` (PDF, JPG, PNG, DOCX, 10 MB each) → `201 { ok: true }`                     |
-| POST   | `/api/quotes`     | Same pattern: `customerName`, `company?`, `email`, `phone`, `serviceId?`, `projectType`, `location`, `estimatedBudget?`, `currency`, `expectedStartDate?`, `description`, up to 5 attachments → `201 { ok: true, reference: "Q-2026-000042" }` |
-| GET    | `/api/health`     | `{ status: "ok", database: "ok" }` or `503`. For load balancers and Docker                                                                                                                                                                     |
+| Method | Path                 | Notes                                                                                                                                                                                                                                          |
+| ------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/form-token`    | Anti-spam token for the public forms (valid from 3 s to 24 h)                                                                                                                                                                                  |
+| POST   | `/api/inquiries`     | `multipart/form-data`: `name`, `email`, `phone?`, `company?`, `subject`, `message`, `locale`, `formToken`, `website` (honeypot, leave empty), up to 3 `attachments` (PDF, JPG, PNG, DOCX, 10 MB each) → `201 { ok: true }`                     |
+| POST   | `/api/quotes`        | Same pattern: `customerName`, `company?`, `email`, `phone`, `serviceId?`, `projectType`, `location`, `estimatedBudget?`, `currency`, `expectedStartDate?`, `description`, up to 5 attachments → `201 { ok: true, reference: "Q-2026-000042" }` |
+| POST   | `/api/chat`          | Start a live chat. JSON: `name`, `contact` (email or phone), `message` (≤ 2,000 characters), `locale`, `formToken`, `website` (honeypot) → `201 { conversation }` and an httpOnly `chat_session` cookie                                        |
+| GET    | `/api/chat`          | The visitor's own conversation, by cookie: `{ conversation: { status, messages: [{ id, sender: "visitor"\|"staff", body, createdAt }] } }` or `{ conversation: null }`. `?after=<ISO time>` returns only newer messages                        |
+| POST   | `/api/chat/messages` | A further visitor message, by cookie. JSON: `body` → `201 { message }`; `404` when the conversation no longer exists                                                                                                                           |
+| GET    | `/api/health`        | `{ status: "ok", database: "ok" }` or `503`. For load balancers and Docker                                                                                                                                                                     |
 
 Public form posts need a same-origin `Origin` header and are limited to 5 per
 IP per 10 minutes and 10 per email per day. Submissions caught as spam get a
 normal-looking `201` and are not stored.
+
+Chat posts also need a same-origin `Origin` header. Limits: 5 new chats per
+IP per hour, 60 messages per IP per 10 minutes, 20 per conversation per 5
+minutes. With `ALLOW_CHAT=false` all chat endpoints answer `404`. Staff answer
+chats in the CMS (Live chat); there is no staff REST endpoint for chats.
 
 ### Other
 

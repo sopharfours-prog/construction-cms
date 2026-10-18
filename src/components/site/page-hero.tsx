@@ -59,19 +59,13 @@ export function PageHero({
   className?: string;
 }) {
   return (
-    <section
-      className={cn("relative overflow-hidden bg-primary text-primary-foreground", className)}
-    >
+    <section className={cn("relative overflow-hidden bg-brand text-brand-foreground", className)}>
       <div
         aria-hidden="true"
         className="absolute inset-y-0 right-0 hidden w-1/3 bg-[repeating-linear-gradient(135deg,transparent_0_22px,rgb(255_255_255/0.04)_22px_23px)] lg:block"
       />
       <div className="relative container-site py-12 md:py-16 lg:py-20">
-        <Breadcrumbs
-          items={crumbs}
-          label={crumbLabel}
-          className="mb-8 text-primary-foreground/80"
-        />
+        <Breadcrumbs items={crumbs} label={crumbLabel} className="mb-8 text-brand-foreground/80" />
         {eyebrow ? (
           <p className="mb-3 text-sm font-semibold tracking-widest text-highlight uppercase">
             {eyebrow}
@@ -81,9 +75,7 @@ export function PageHero({
           {title}
         </h1>
         {intro ? (
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-primary-foreground/80">
-            {intro}
-          </p>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-brand-foreground/80">{intro}</p>
         ) : null}
         {children}
       </div>
@@ -114,7 +106,7 @@ export function SectionHeading({
     >
       <div className="max-w-3xl">
         {eyebrow ? (
-          <p className="mb-3 flex items-center gap-3 text-sm font-semibold tracking-widest text-highlight uppercase">
+          <p className="mb-3 flex items-center gap-3 text-sm font-semibold tracking-widest text-highlight-ink uppercase">
             <span aria-hidden="true" className="h-px w-8 bg-highlight" />
             {eyebrow}
           </p>

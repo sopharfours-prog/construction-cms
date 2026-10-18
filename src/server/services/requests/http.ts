@@ -25,7 +25,7 @@ const created = (body: object) =>
 
 /** POST handler body for the public contact form. */
 export async function handleInquirySubmission(request: Request, info: ActionContext["request"]) {
-  const { fields, files } = await readPublicSubmission(request, ATTACHMENT_LIMITS.inquiry);
+  const { fields, files } = await readPublicSubmission(request, ATTACHMENT_LIMITS.inquiry, info);
   const input = inquiryInputSchema.parse(fields);
   const result = await submitInquiry(input, files, info, fields.locale);
   if (!result.spam) {
@@ -54,7 +54,7 @@ export async function handleInquirySubmission(request: Request, info: ActionCont
 
 /** POST handler body for the public quote form. */
 export async function handleQuoteSubmission(request: Request, info: ActionContext["request"]) {
-  const { fields, files } = await readPublicSubmission(request, ATTACHMENT_LIMITS.quote);
+  const { fields, files } = await readPublicSubmission(request, ATTACHMENT_LIMITS.quote, info);
   const input = quoteInputSchema.parse(fields);
   const result = await submitQuote(input, files, info, fields.locale);
   if (!result.spam && result.reference) {

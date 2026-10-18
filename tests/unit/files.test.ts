@@ -100,3 +100,54 @@ describe("helpers", () => {
     expect(isSameOrigin(h({ origin: "null", host: "cms.example.com" }))).toBe(false);
   });
 });
+
+describe("deletedSlug", () => {
+  it("always satisfies the database slug format, also when the cut lands on a hyphen", async () => {
+    const { deletedSlug, SLUG_PATTERN } = await import("@/lib/content/slug");
+    const id = "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b";
+    const cutOnHyphen = `${"a".repeat(169)}-${"b".repeat(20)}`;
+    for (const slug of ["bridge", cutOnHyphen, "a".repeat(200)]) {
+      const result = deletedSlug(slug, id);
+      expect(result).toMatch(SLUG_PATTERN);
+      expect(result.length).toBeLessThanOrEqual(200);
+    }
+  });
+});
+
+describe("isSafeHref", () => {
+  it("accepts site paths and web, mail and phone links only", async () => {
+    const { isSafeHref } = await import("@/lib/content/rich-text");
+    for (const ok of [
+      "/lo/projects",
+      "https://example.com/a",
+      "mailto:a@example.com",
+      "tel:+85621",
+    ])
+      expect(isSafeHref(ok), ok).toBe(true);
+    for (const bad of [
+      "javascript:alert(1)",
+      "//evil.example",
+      "/\\evil.example",
+      "data:text/html,x",
+    ])
+      expect(isSafeHref(bad), bad).toBe(false);
+  });
+});
+
+describe("resolveRange", () => {
+  it("resolves single byte ranges against the file size", async () => {
+    const { resolveRange } = await import("@/lib/storage/range");
+    expect(resolveRange(null, 1000)).toBeNull();
+    expect(resolveRange("bytes=0-1,5-9", 1000)).toBeNull();
+    expect(resolveRange("items=0-1", 1000)).toBeNull();
+    expect(resolveRange("bytes=0-499", 1000)).toEqual({ start: 0, end: 499 });
+    expect(resolveRange("bytes=500-", 1000)).toEqual({ start: 500, end: 999 });
+    expect(resolveRange("bytes=-200", 1000)).toEqual({ start: 800, end: 999 });
+    expect(resolveRange("bytes=-5000", 1000)).toEqual({ start: 0, end: 999 });
+    expect(resolveRange("bytes=900-5000", 1000)).toEqual({ start: 900, end: 999 });
+    expect(resolveRange("bytes=1000-", 1000)).toBe("unsatisfiable");
+    expect(resolveRange("bytes=5-2", 1000)).toBe("unsatisfiable");
+    expect(resolveRange("bytes=-0", 1000)).toBe("unsatisfiable");
+    expect(resolveRange("bytes=0-", 0)).toBe("unsatisfiable");
+  });
+});

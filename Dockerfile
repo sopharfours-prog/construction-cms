@@ -3,6 +3,8 @@
 # Production image for Construction CMS (see DEPLOYMENT.md).
 #
 #   docker build --build-arg NEXT_PUBLIC_SITE_URL=https://example.com -t construction-cms .
+#   With S3/R2/MinIO storage also pass (docker-compose.prod.yml does):
+#     --build-arg STORAGE_DRIVER=s3 --build-arg S3_PUBLIC_URL=https://files.example.com
 #
 # Targets:
 #   runner (default)  the web server: node server.js, non-root, ~300 MB
@@ -28,7 +30,17 @@ FROM deps AS builder
 COPY . .
 # Inlined into the build: the public URL is part of the image.
 ARG NEXT_PUBLIC_SITE_URL
+# Also fixed at build time: the standalone server runs with the next.config.ts
+# evaluated here, so the host next/image may load uploads from (S3_PUBLIC_URL)
+# must be known now. Set at run time only, every uploaded image would be
+# refused with "url parameter is not allowed".
+ARG STORAGE_DRIVER=local
+ARG S3_PUBLIC_URL=
+ARG IMAGES_ALLOW_LOCAL_IP=false
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} \
+    STORAGE_DRIVER=${STORAGE_DRIVER} \
+    S3_PUBLIC_URL=${S3_PUBLIC_URL} \
+    IMAGES_ALLOW_LOCAL_IP=${IMAGES_ALLOW_LOCAL_IP} \
     NEXT_OUTPUT=standalone
 RUN test -n "$NEXT_PUBLIC_SITE_URL" || (echo "Build arg NEXT_PUBLIC_SITE_URL is required" && exit 1)
 # No database or secrets are needed to build (pages render on first visit).

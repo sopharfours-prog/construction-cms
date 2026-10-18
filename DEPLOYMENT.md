@@ -30,9 +30,15 @@ overwrites `X-Forwarded-For`: rate limits and audit-log IP addresses can't be
 spoofed. **Never publish the app's port 3000 directly.**
 
 One-off services run first: `migrate` (applies database migrations) and
-`minio-init` (creates the bucket; `public/` is readable by anyone,
+`storage-init` (creates the bucket; `public/` is readable by anyone,
 `private/` holds customer attachments and is not). The app starts only after
 both succeed.
+
+The storage server is the community-maintained build of MinIO
+(`pgsty/minio`): MinIO no longer publishes its own images. Bucket setup,
+backups and restores use `scripts/storage.ts`, which speaks plain S3, so the
+same commands work if you later move to AWS S3, Cloudflare R2 or another
+S3-compatible server.
 
 ### Requirements
 
@@ -126,8 +132,7 @@ Restore (stops the app briefly):
 C="docker compose -f docker-compose.prod.yml --env-file .env.production"
 $C stop app
 $C exec -T postgres pg_restore --clean --if-exists --no-owner -U cms -d construction_cms < backups/<stamp>/database.dump
-$C run --rm --no-deps -v "$PWD/backups/<stamp>:/backup" --entrypoint /bin/sh minio-init -c \
-  'mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" && mc mirror --overwrite /backup/files local/$S3_BUCKET'
+$C run --rm --no-deps -v "$PWD/backups/<stamp>:/backup" storage-init npx tsx scripts/storage.ts import /backup/files
 $C start app
 ```
 
@@ -159,7 +164,7 @@ Test a restore on a spare machine at least once.
   `proxy_set_header X-Forwarded-For $remote_addr`). Run `npm run db:deploy`
   before each start of a new version.
 - **External S3 or R2 instead of MinIO:** set the `S3_*` variables of the
-  app to your provider and remove `minio`, `minio-init` and the `/files`
+  app to your provider and remove `minio`, `storage-init` and the `/files`
   location. Make only `public/` publicly readable.
 
 ---
@@ -238,12 +243,12 @@ integration tests, production build, then the Playwright end-to-end tests
 
 ## Troubleshooting
 
-| Symptom                                     | Fix                                                                                                                                                     |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `nginx` won't start: certificate not found  | Issue the first certificate (step 2) before `up`.                                                                                                       |
-| Every sign-in returns 500 (`UntrustedHost`) | `AUTH_URL` must equal the public URL (`https://…`).                                                                                                     |
-| Forms answer 403 `origin`                   | The browser's origin differs from the host Nginx forwards. Keep `proxy_set_header Host $http_host` and `X-Forwarded-Host $http_host` from the template. |
-| Images from `/files` don't show in pages    | The app container must reach `https://DOMAIN`. On LAN-only servers set `IMAGES_ALLOW_LOCAL_IP=true`.                                                    |
-| Uploads over ~100 MB fail with 413          | Intended limit (`client_max_body_size`).                                                                                                                |
-| `migrate` exits with an error               | `docker compose … logs migrate`; the app is not started until migrations succeed.                                                                       |
-| Emails not sent                             | Check SMTP variables and `logs app` for `[notify]` lines. Requests are stored even when email fails.                                                    |
+| Symptom                                     | Fix                                                                                                                                                                                                                    |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nginx` won't start: certificate not found  | Issue the first certificate (step 2) before `up`.                                                                                                                                                                      |
+| Every sign-in returns 500 (`UntrustedHost`) | `AUTH_URL` must equal the public URL (`https://…`).                                                                                                                                                                    |
+| Forms answer 403 `origin`                   | The browser's origin differs from the host Nginx forwards. Keep `proxy_set_header Host $http_host` and `X-Forwarded-Host $http_host` from the template.                                                                |
+| Images from `/files` don't show in pages    | The app container must reach `https://DOMAIN`. On LAN-only servers set `IMAGES_ALLOW_LOCAL_IP=true`. The storage URL and this flag are built into the image: after changing `DOMAIN` or the flag, run `up -d --build`. |
+| Uploads over ~100 MB fail with 413          | Intended limit (`client_max_body_size`).                                                                                                                                                                               |
+| `migrate` exits with an error               | `docker compose … logs migrate`; the app is not started until migrations succeed.                                                                                                                                      |
+| Emails not sent                             | Check SMTP variables and `logs app` for `[notify]` lines. Requests are stored even when email fails.                                                                                                                   |

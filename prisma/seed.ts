@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../scripts/load-env";
 
 import { PrismaPg } from "@prisma/adapter-pg";
 

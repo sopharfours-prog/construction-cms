@@ -22,8 +22,8 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // CLI scripts (seed): console output is their user interface.
-    files: ["prisma/**/*.ts"],
+    // CLI scripts (seed, storage): console output is their user interface.
+    files: ["prisma/**/*.ts", "scripts/**/*.ts"],
     rules: { "no-console": "off" },
   },
   // Must stay last: turns off stylistic rules that Prettier owns.
@@ -35,6 +35,8 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "next-env.d.ts",
     "src/generated/**",
+    // Git worktrees created by editor tools: copies of this repository.
+    ".kilo/**",
   ]),
 ]);
 

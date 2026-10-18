@@ -78,7 +78,7 @@ export default async function ServicePage({ params }: Props) {
         </span>
       </PageHero>
 
-      <div className="container-site grid gap-12 py-14 lg:grid-cols-[1fr_20rem] lg:py-20">
+      <div className="container-site grid grid-cols-1 gap-12 py-14 lg:grid-cols-[1fr_20rem] lg:py-20">
         <div className="min-w-0">
           {service.cover ? (
             <CoverImage
@@ -97,7 +97,7 @@ export default async function ServicePage({ params }: Props) {
               </h2>
               <ol className="grid gap-6">
                 {service.process.map((step, i) => (
-                  <li key={step.title} className="grid grid-cols-[3rem_1fr] gap-4">
+                  <li key={i} className="grid grid-cols-[3rem_1fr] gap-4">
                     <span
                       aria-hidden="true"
                       className="flex size-12 items-center justify-center border-2 border-highlight text-lg font-bold tabular-nums"
@@ -145,7 +145,7 @@ export default async function ServicePage({ params }: Props) {
         <section className="bg-muted/50 py-16 lg:py-24" aria-labelledby="service-projects">
           <div className="container-site">
             <SectionHeading title={s.relatedProjects} id="service-projects" />
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {service.projects.map((p) => (
                 <ProjectCard key={p.slug} project={p} locale={locale} t={t.public} />
               ))}

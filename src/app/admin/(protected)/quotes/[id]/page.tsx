@@ -14,7 +14,9 @@ import {
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isLocale, localeConfig } from "@/config/i18n";
+import { NotificationsSync } from "@/components/admin/shell/notifications-sync";
 import { getAdminMessages } from "@/i18n/admin";
+import { markRequestRead } from "@/server/services/notifications";
 import { getAdminLocale } from "@/i18n/admin-locale";
 import { hasPermission, requirePermission } from "@/lib/auth/session";
 import { formatDateTime, formatNumber } from "@/lib/format";
@@ -36,6 +38,8 @@ export default async function QuotePage({ params }: PageProps<"/admin/quotes/[id
   const q = t.quotes;
   const [quote, staff] = await Promise.all([getQuote(id, locale), listAssignableStaff("quote")]);
   if (!quote) notFound();
+  // Opened by staff: no longer unread (leaves the bell; the status is unchanged).
+  await markRequestRead("quote", quote.id);
   const canUpdate = hasPermission(user, "quotes.update");
   const dateOnly = (d: Date | null) =>
     d
@@ -47,11 +51,12 @@ export default async function QuotePage({ params }: PageProps<"/admin/quotes/[id
 
   return (
     <>
+      <NotificationsSync />
       <AdminPageHeader
         title={`${quote.referenceNumber} · ${quote.customerName}`}
         description={`${q.detailTitle} · ${formatDateTime(quote.createdAt, locale)}`}
       />
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="grid content-start gap-6 lg:col-span-2">
           <Card>
             <CardHeader className="flex-row items-center justify-between gap-2">
@@ -147,9 +152,9 @@ export default async function QuotePage({ params }: PageProps<"/admin/quotes/[id
               <Details
                 rows={[
                   [q.columns.customer, quote.customerName],
-                  ["🏢", quote.company],
+                  [r.company, quote.company],
                   [r.email, quote.email],
-                  ["☎", quote.phone],
+                  [r.phone, quote.phone],
                   [
                     r.language,
                     quote.locale && isLocale(quote.locale)

@@ -6,6 +6,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 
 import { isValidStorageKey } from "./keys";
+import { resolveRange } from "./range";
 import type { StorageAdapter } from "./types";
 
 const MIME_BY_EXT: Record<string, string> = {
@@ -40,15 +41,23 @@ export function createLocalAdapter(directory: string): StorageAdapter {
       await mkdir(path.dirname(file), { recursive: true });
       await writeFile(file, body, { flag: "wx" });
     },
-    async get(key) {
+    async get(key, rangeHeader) {
       const file = resolve(key);
       const info = await stat(file).catch(() => null);
       if (!info?.isFile()) return null;
-      const ext = path.extname(file).slice(1);
+      const contentType = MIME_BY_EXT[path.extname(file).slice(1)] ?? "application/octet-stream";
+      const range = resolveRange(rangeHeader, info.size);
+      if (range === "unsatisfiable") {
+        const body = new ReadableStream<Uint8Array>({ start: (c) => c.close() });
+        return { body, size: 0, totalSize: info.size, range, contentType };
+      }
+      const stream = createReadStream(file, range ?? undefined);
       return {
-        body: Readable.toWeb(createReadStream(file)) as ReadableStream<Uint8Array>,
-        size: info.size,
-        contentType: MIME_BY_EXT[ext] ?? "application/octet-stream",
+        body: Readable.toWeb(stream) as ReadableStream<Uint8Array>,
+        size: range ? range.end - range.start + 1 : info.size,
+        totalSize: info.size,
+        ...(range ? { range } : {}),
+        contentType,
       };
     },
     async delete(key) {

@@ -2,16 +2,27 @@ import "server-only";
 
 import { z } from "zod";
 
+import { defaultLocale, type Locale } from "@/config/i18n";
+import { siteConfig } from "@/config/site";
 import type { Prisma } from "@/generated/prisma/client";
+import { getMessages } from "@/i18n/messages";
 import { pageParam, paginate, stringParam } from "@/lib/admin/list-params";
-import { hashPassword } from "@/lib/auth/password";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import type { PermissionKey } from "@/lib/permissions/registry";
 import { db } from "@/lib/db/client";
+import { sendMail } from "@/lib/mail/mailer";
 import type { RoleInput, UserCreateInput, UserUpdateInput } from "@/lib/validation/users";
 import { writeAuditLog } from "@/server/services/audit";
 import { issuePasswordLink } from "@/server/services/auth/password-reset";
 import { type ActionContext, ContentError } from "@/server/services/errors";
 import { assertImages } from "@/server/services/media/media";
+import {
+  consumeRateLimit,
+  peekRateLimit,
+  rateLimitKey,
+  rateLimits,
+  resetRateLimit,
+} from "@/server/services/rate-limit";
 
 export const SUPER_ADMIN_ROLE = "SUPER_ADMIN";
 
@@ -19,7 +30,7 @@ export const userListSchema = z.object({
   page: pageParam,
   q: stringParam(200),
   role: z.uuid().optional().catch(undefined),
-  status: z.enum(["ACTIVE", "DISABLED"]).optional().catch(undefined),
+  status: z.enum(["ACTIVE", "DISABLED", "PENDING"]).optional().catch(undefined),
 });
 export type UserListFilters = z.infer<typeof userListSchema>;
 
@@ -61,16 +72,37 @@ export async function listUsers(filters: UserListFilters) {
         }
       : {}),
   };
-  const total = await db.user.count({ where });
+  // Requests waiting for approval come first: they need a decision. Postgres
+  // sorts enums in declaration order (PENDING last), so they are paged separately.
+  const pendingWhere: Prisma.UserWhereInput = { AND: [where, { status: "PENDING" }] };
+  const otherWhere: Prisma.UserWhereInput = { AND: [where, { status: { not: "PENDING" } }] };
+  const [pendingTotal, otherTotal] = await Promise.all([
+    db.user.count({ where: pendingWhere }),
+    db.user.count({ where: otherWhere }),
+  ]);
+  const total = pendingTotal + otherTotal;
   const { page, pageCount, skip, take } = paginate(total, filters.page);
-  const rows = await db.user.findMany({
-    where,
-    orderBy: [{ status: "asc" }, { name: "asc" }],
-    skip,
-    take,
-    select: userSelect,
-  });
-  return { rows, total, page, pageCount };
+  const pending =
+    skip < pendingTotal
+      ? await db.user.findMany({
+          where: pendingWhere,
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          skip,
+          take,
+          select: userSelect,
+        })
+      : [];
+  const others =
+    pending.length < take
+      ? await db.user.findMany({
+          where: otherWhere,
+          orderBy: [{ status: "asc" }, { name: "asc" }, { id: "asc" }],
+          skip: Math.max(0, skip - pendingTotal),
+          take: take - pending.length,
+          select: userSelect,
+        })
+      : [];
+  return { rows: [...pending, ...others], total, page, pageCount };
 }
 
 export function getUser(id: string) {
@@ -219,6 +251,8 @@ export async function updateUser(id: string, input: UserUpdateInput, ctx: Action
       input.roleId !== target.roleId ? "roleId" : "status",
       "cannotChangeOwnAccess",
     );
+  if (input.status === "PENDING" && target.status !== "PENDING")
+    throw new ContentError("validation", "status", "invalid");
   if (input.roleId !== target.roleId)
     assertWithinActor(ctx, await rolePermissions(input.roleId), "roleId");
   if (target.status === "ACTIVE" && (input.status !== "ACTIVE" || input.roleId !== target.roleId))
@@ -270,13 +304,35 @@ export async function updateUser(id: string, input: UserUpdateInput, ctx: Action
       tx,
     );
   });
+  if (target.status === "PENDING" && input.status === "ACTIVE")
+    await notifyApproved({ email: input.email, preferredLocale: input.preferredLocale });
   return { id };
+}
+
+/** Best effort: the account is active either way, and the applicant can simply try to sign in. */
+async function notifyApproved(user: { email: string; preferredLocale: string | null }) {
+  const locale: Locale = user.preferredLocale === "en" ? "en" : defaultLocale;
+  const primary = getMessages(locale).auth.approvedEmail;
+  const secondary = getMessages(locale === "en" ? "lo" : "en").auth.approvedEmail;
+  const link = `${siteConfig.url}/admin/login`;
+  try {
+    await sendMail({
+      to: user.email,
+      subject: `${primary.subject} / ${secondary.subject}`,
+      text: [primary.body, link, "", "—", "", secondary.body, link].join("\n"),
+    });
+  } catch (error) {
+    console.error("[users] approval email failed", error);
+  }
 }
 
 export async function setUserStatus(id: string, status: "ACTIVE" | "DISABLED", ctx: ActionContext) {
   const target = await loadTarget(id, ctx);
   if (id === ctx.user.id) throw new ContentError("validation", undefined, "cannotChangeOwnAccess");
   if (target.status === status) return { id };
+  // A registration request is approved in the user form, where a role must be chosen.
+  if (target.status === "PENDING" && status === "ACTIVE")
+    throw new ContentError("validation", "status", "invalid");
   if (status === "DISABLED") await assertNotLastSuperAdmin(target);
   await db.$transaction(async (tx) => {
     await tx.user.update({
@@ -367,6 +423,61 @@ export async function setUserPassword(id: string, newPassword: string, ctx: Acti
       tx,
     );
   });
+  return { id };
+}
+
+/**
+ * A signed-in user changes their own password. They must know the current
+ * one (a stolen session alone can't lock the owner out), wrong guesses are
+ * limited, and every session of theirs ends, including this one.
+ */
+export async function changeOwnPassword(
+  input: { currentPassword: string; password: string },
+  ctx: ActionContext,
+) {
+  const id = ctx.user.id;
+  const limitKey = rateLimitKey("password-change-fail", id);
+  const limit = await peekRateLimit(limitKey, rateLimits.passwordChangeFailuresPerUser);
+  if (!limit.allowed) throw new ContentError("validation", "currentPassword", "tooManyAttempts");
+
+  const user = await db.user.findFirst({
+    where: { id, deletedAt: null, status: "ACTIVE" },
+    select: { passwordHash: true },
+  });
+  if (!user) throw new ContentError("notFound");
+  if (!user.passwordHash || !(await verifyPassword(user.passwordHash, input.currentPassword))) {
+    await consumeRateLimit(limitKey, rateLimits.passwordChangeFailuresPerUser);
+    throw new ContentError("validation", "currentPassword", "currentPasswordWrong");
+  }
+
+  const passwordHash = await hashPassword(input.password);
+  await db.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id },
+      data: {
+        passwordHash,
+        sessionVersion: { increment: 1 },
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+    });
+    await tx.passwordResetToken.updateMany({
+      where: { userId: id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    await writeAuditLog(
+      {
+        action: "PASSWORD_RESET",
+        entity: "User",
+        entityId: id,
+        userId: id,
+        newValue: { by: "self" },
+        request: ctx.request,
+      },
+      tx,
+    );
+  });
+  await resetRateLimit(limitKey);
   return { id };
 }
 

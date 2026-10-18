@@ -172,7 +172,7 @@ export function RequestControls({
             <AlertDialogCancel disabled={pending}>{c.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={pending}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              variant="destructive"
               onClick={(e) => {
                 e.preventDefault();
                 run(

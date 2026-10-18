@@ -59,7 +59,7 @@ function FolderDialog({
 }) {
   const router = useRouter();
   const action = folder ? renameFolderAction.bind(null, folder.id) : createFolderAction;
-  const { formAction, pending, errorFor } = useActionForm(action, labels, {
+  const { onSubmit, pending, errorFor } = useActionForm(action, labels, {
     successMessage: folder ? labels.common.toast.saved : labels.common.toast.created,
     onSuccess: () => {
       onClose();
@@ -72,7 +72,7 @@ function FolderDialog({
         <DialogHeader>
           <DialogTitle>{folder ? labels.media.renameFolder : labels.media.newFolder}</DialogTitle>
         </DialogHeader>
-        <form action={formAction} noValidate className="grid gap-4">
+        <form onSubmit={onSubmit} noValidate className="grid gap-4">
           <FormField id="folder-name" label={labels.media.folderName} error={errorFor("name")}>
             {(a) => (
               <Input {...a} name="name" defaultValue={folder?.name} maxLength={120} autoFocus />
@@ -214,7 +214,7 @@ export function FolderPanel({
             <AlertDialogCancel disabled={pending}>{labels.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={pending}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              variant="destructive"
               onClick={(e) => {
                 e.preventDefault();
                 const folder = deleting;

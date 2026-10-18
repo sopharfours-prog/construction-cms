@@ -79,9 +79,15 @@ export default async function NewsPage({ params, searchParams }: PageProps<"/[lo
           </nav>
         ) : null}
         {result.items.length ? (
-          <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
             {result.items.map((item) => (
-              <NewsCard key={item.slug} news={item} locale={locale} t={t.public} />
+              <NewsCard
+                key={item.slug}
+                news={item}
+                locale={locale}
+                t={t.public}
+                headingLevel="h2"
+              />
             ))}
           </div>
         ) : (

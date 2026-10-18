@@ -17,10 +17,21 @@ export const rateLimits = {
   loginPerIp: { limit: 20, windowSeconds: 15 * 60 },
   /** Failed logins for one email, whether or not the account exists. */
   loginFailuresPerEmail: { limit: 5, windowSeconds: 15 * 60 },
+  /** Staff account requests from the public registration form. */
+  registrationPerIp: { limit: 5, windowSeconds: 60 * 60 },
   passwordResetPerIp: { limit: 10, windowSeconds: 60 * 60 },
   passwordResetPerEmail: { limit: 3, windowSeconds: 60 * 60 },
+  /** Wrong "current password" entries when changing one's own password. */
+  passwordChangeFailuresPerUser: { limit: 5, windowSeconds: 15 * 60 },
   uploadsPerUser: { limit: 200, windowSeconds: 60 * 60 },
   publicFormPerIp: { limit: 5, windowSeconds: 10 * 60 },
+  /** Every public form request from one connection, counted before the body is read. */
+  publicFormRequestsPerIp: { limit: 30, windowSeconds: 10 * 60 },
+  /** New website chats from one connection. */
+  chatStartPerIp: { limit: 5, windowSeconds: 60 * 60 },
+  /** Visitor chat messages from one connection, and within one conversation. */
+  chatMessagesPerIp: { limit: 60, windowSeconds: 10 * 60 },
+  chatMessagesPerConversation: { limit: 20, windowSeconds: 5 * 60 },
   publicFormPerEmail: { limit: 10, windowSeconds: 24 * 60 * 60 },
   replyPerUser: { limit: 60, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;

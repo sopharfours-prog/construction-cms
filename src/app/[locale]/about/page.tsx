@@ -1,4 +1,4 @@
-import { AwardIcon, UserIcon } from "lucide-react";
+import { AwardIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -12,7 +12,9 @@ import { fmt } from "@/i18n/format";
 import { getMessages } from "@/i18n/messages";
 import { localizedPath } from "@/i18n/routing";
 import { formatDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { getAboutData } from "@/server/public/content";
+import { nameInitials } from "@/lib/content/initials";
 import { pageMetadata } from "@/lib/seo/metadata";
 import { getEnabledLocales } from "@/server/services/site-settings";
 import { getSiteShell } from "@/server/public/site";
@@ -51,8 +53,13 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
       />
 
       {page ? (
-        <section className="container-site grid gap-12 py-14 lg:grid-cols-[1fr_24rem] lg:py-20">
-          <RichText doc={page.content} className="max-w-3xl" />
+        <section
+          className={cn(
+            "container-site grid gap-12 py-14 lg:py-20",
+            page.cover && "lg:grid-cols-[1fr_24rem]",
+          )}
+        >
+          <RichText doc={page.content} className="max-w-3xl text-lg" />
           {page.cover ? (
             <CoverImage
               image={page.cover}
@@ -67,18 +74,24 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
 
       {milestones.length ? (
         <section
-          className="bg-primary py-16 text-primary-foreground lg:py-24"
+          className="bg-brand py-16 text-brand-foreground lg:py-24"
           aria-labelledby="history-title"
         >
           <div className="container-site">
             <h2 id="history-title" className="mb-12 text-3xl type-heading md:text-4xl">
               {a.history}
             </h2>
-            <ol className="relative grid gap-10 border-l border-primary-foreground/20 pl-8 md:grid-cols-2 md:gap-x-16 lg:grid-cols-3 lg:border-l-0 lg:pl-0">
+            <ol
+              className={cn(
+                "relative grid gap-10 border-l border-brand-foreground/20 pl-8 md:grid-cols-2 md:gap-x-12 lg:border-l-0 lg:pl-0",
+                // Four milestones sit on one row instead of leaving one alone on a second.
+                milestones.length === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3",
+              )}
+            >
               {milestones.map((m) => (
                 <li
                   key={m.id}
-                  className="relative lg:border-t lg:border-primary-foreground/20 lg:pt-6"
+                  className="relative lg:border-t lg:border-brand-foreground/20 lg:pt-6"
                 >
                   <span
                     aria-hidden="true"
@@ -87,7 +100,7 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
                   <p className="text-4xl type-display text-highlight tabular-nums">{m.year}</p>
                   <h3 className="mt-2 text-lg type-heading">{m.title}</h3>
                   {m.description ? (
-                    <p className="mt-2 text-sm leading-relaxed text-primary-foreground/75">
+                    <p className="mt-2 text-sm leading-relaxed text-brand-foreground/75">
                       {m.description}
                     </p>
                   ) : null}
@@ -101,7 +114,7 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
       {team.length ? (
         <section className="container-site py-16 lg:py-24" aria-labelledby="team-title">
           <SectionHeading title={a.team} id="team-title" />
-          <ul className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {team.map((member) => (
               <li key={member.id}>
                 <div className="relative aspect-[4/5] overflow-hidden bg-muted">
@@ -114,14 +127,20 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
                       className="object-cover"
                     />
                   ) : (
-                    <UserIcon
+                    // No portrait yet: initials in the brand colours (never a stand-in face).
+                    <div
                       aria-hidden="true"
-                      className="absolute inset-0 m-auto size-16 text-muted-foreground/40"
-                    />
+                      className="absolute inset-0 flex items-center justify-center bg-brand bg-[repeating-linear-gradient(135deg,transparent_0_22px,color-mix(in_oklab,var(--brand-foreground)_6%,transparent)_22px_23px)] text-brand-foreground"
+                    >
+                      <span className="text-6xl type-display tracking-wide">
+                        {nameInitials(member.name)}
+                      </span>
+                      <span className="absolute inset-x-0 bottom-0 h-1.5 bg-highlight" />
+                    </div>
                   )}
                 </div>
                 <h3 className="mt-4 text-lg type-heading">{member.name}</h3>
-                <p className="text-sm font-medium text-highlight">{member.position}</p>
+                <p className="text-sm font-medium text-highlight-ink">{member.position}</p>
                 {member.bio ? (
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{member.bio}</p>
                 ) : null}
@@ -135,7 +154,7 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
         <section className="bg-muted/50 py-16 lg:py-24" aria-labelledby="cert-title">
           <div className="container-site">
             <SectionHeading title={a.certifications} id="cert-title" />
-            <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {certifications.map((c) => (
                 <li key={c.id} className="flex gap-4 border bg-card p-5">
                   <AwardIcon className="size-8 shrink-0 text-highlight" aria-hidden="true" />

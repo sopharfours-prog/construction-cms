@@ -33,6 +33,7 @@ const MAX_TEXT = 50_000;
 
 export function isSafeHref(href: unknown): href is string {
   if (typeof href !== "string" || href.length > 2048) return false;
+  if (/[\\\u0000-\u001f]/.test(href)) return false;
   if (href.startsWith("/") && !href.startsWith("//")) return true;
   try {
     return ["http:", "https:", "mailto:", "tel:"].includes(new URL(href).protocol);

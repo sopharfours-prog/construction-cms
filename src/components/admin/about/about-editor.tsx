@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowDownIcon, ArrowUpIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CameraIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -10,6 +17,7 @@ import { TranslationTabs } from "@/components/admin/form/translation-tabs";
 import { useActionForm } from "@/components/admin/form/use-action-form";
 import { MediaField } from "@/components/admin/media/media-field";
 import type { PickedImage } from "@/components/admin/media/media-picker";
+import { MediaThumb } from "@/components/admin/media/media-thumb";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +46,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Locale } from "@/config/i18n";
 import type { AdminMessages } from "@/i18n/admin";
 import type { ActionResult } from "@/lib/actions";
+import { nameInitials } from "@/lib/content/initials";
+import { cn } from "@/lib/utils";
 import {
   deleteAboutItemAction,
   moveAboutItemAction,
@@ -89,7 +99,7 @@ function ItemDialog({
   const router = useRouter();
   const f = labels.about.fields;
   const c = labels.common;
-  const { formAction, pending, fieldErrors, errorFor } = useActionForm(
+  const { onSubmit, pending, fieldErrors, errorFor } = useActionForm(
     actions[kind].bind(null, item?.id ?? null),
     labels,
     {
@@ -111,7 +121,7 @@ function ItemDialog({
     certification: [
       ["name", f.certName, "input", 200],
       ["issuer", f.issuer, "input", 200],
-      ["description", f.certDescription, "textarea", 1000],
+      ["description", f.certDescription, "textarea", 500],
     ],
     milestone: [
       ["title", f.title, "input", 200],
@@ -128,7 +138,18 @@ function ItemDialog({
           </DialogTitle>
           <DialogDescription className="sr-only">{labels.about.description}</DialogDescription>
         </DialogHeader>
-        <form action={formAction} noValidate className="grid gap-5">
+        <form onSubmit={onSubmit} noValidate className="grid gap-5">
+          {kind === "team" ? (
+            <MediaField
+              name="photoId"
+              label={f.photo}
+              hint={labels.about.photoHint}
+              frameClassName="aspect-[4/5] max-w-40"
+              error={errorFor("photoId")}
+              defaultValue={item?.image ?? null}
+              labels={labels}
+            />
+          ) : null}
           <TranslationTabs fieldErrors={fieldErrors} labels={c}>
             {(locale) =>
               textFields[kind].map(([key, label, type, max]) => {
@@ -158,7 +179,7 @@ function ItemDialog({
               })
             }
           </TranslationTabs>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {kind === "milestone" ? (
               <FormField id="a-year" label={f.year} error={errorFor("year")}>
                 {(a) => (
@@ -207,11 +228,11 @@ function ItemDialog({
               )}
             </FormField>
           </div>
-          {kind !== "milestone" ? (
+          {kind === "certification" ? (
             <MediaField
-              name={kind === "team" ? "photoId" : "imageId"}
-              label={kind === "team" ? f.photo : f.image}
-              error={errorFor(kind === "team" ? "photoId" : "imageId")}
+              name="imageId"
+              label={f.image}
+              error={errorFor("imageId")}
               defaultValue={item?.image ?? null}
               labels={labels}
             />
@@ -231,7 +252,51 @@ function ItemDialog({
   );
 }
 
+/** A team member's photo in the list, or their initials (with a camera) when there is none. */
+function TeamPhoto({
+  item,
+  onClick,
+  label,
+}: {
+  item: AboutItem;
+  onClick?: () => void;
+  label: string;
+}) {
+  const frame = "relative aspect-[4/5] w-10 shrink-0 overflow-hidden rounded-md";
+  const content = item.image ? (
+    <MediaThumb media={item.image} sizes="40px" className="aspect-auto size-full" />
+  ) : (
+    <span className="flex size-full items-center justify-center bg-brand text-xs font-semibold text-brand-foreground">
+      {nameInitials(item.label)}
+      <span className="absolute right-0.5 bottom-0.5 flex size-4 items-center justify-center rounded-full bg-background text-foreground shadow-sm">
+        <CameraIcon className="size-2.5" aria-hidden="true" />
+      </span>
+    </span>
+  );
+  if (!onClick)
+    return (
+      <span aria-hidden="true" className={frame}>
+        {content}
+      </span>
+    );
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={cn(
+        frame,
+        "ring-offset-background transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+      )}
+    >
+      {content}
+    </button>
+  );
+}
+
 function Section({
+  className,
   kind,
   title,
   items,
@@ -239,6 +304,7 @@ function Section({
   canDelete,
   labels,
 }: {
+  className?: string;
   kind: Kind;
   title: string;
   items: AboutItem[];
@@ -262,7 +328,7 @@ function Section({
     });
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
         {canEdit ? (
@@ -307,8 +373,20 @@ function Section({
                     </Button>
                   </div>
                 ) : null}
+                {kind === "team" ? (
+                  <TeamPhoto
+                    item={item}
+                    onClick={canEdit ? () => setEditing(item) : undefined}
+                    label={`${item.image ? labels.about.edit : labels.about.addPhoto}: ${item.label}`}
+                  />
+                ) : null}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{item.label}</p>
+                  <p className="truncate font-medium">
+                    {item.label}
+                    {kind === "team" && !item.image ? (
+                      <span className="sr-only"> ({labels.about.noPhoto})</span>
+                    ) : null}
+                  </p>
                   {item.sub ? (
                     <p className="truncate text-xs text-muted-foreground">{item.sub}</p>
                   ) : null}
@@ -362,7 +440,7 @@ function Section({
             <AlertDialogCancel disabled={pending}>{c.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={pending}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              variant="destructive"
               onClick={(e) => {
                 e.preventDefault();
                 const target = deleting;
@@ -400,8 +478,9 @@ export function AboutEditor({
 }) {
   const a = labels.about;
   return (
-    <div className="grid gap-6 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Section
+        className="lg:col-span-2"
         kind="team"
         title={a.team}
         items={team}

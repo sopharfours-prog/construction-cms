@@ -27,7 +27,8 @@ never production: the tests create, publish and delete content and submit forms.
 - Public forms accept at most 5 submissions per IP per 10 minutes. Repeated
   runs may hit that limit; clear it with `DELETE FROM rate_limits;` on the test
   database.
-- Forms wait 3.5 s before submitting, because submissions faster than a person
-  could type are treated as spam.
+- A form sent within 3.5 s of loading waits out the remainder before it posts
+  (the server treats a younger anti-spam token as automated), so fast test
+  submissions take a few seconds.
 - Projects: `desktop` runs everything; `mobile` (Pixel 7) runs the public site
   and form tests.

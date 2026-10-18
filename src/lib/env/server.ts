@@ -37,7 +37,10 @@ const serverEnvSchema = z.object({
     .string()
     .optional()
     .transform((v) => v || undefined),
-  SMTP_FROM: z.string().default("Construction CMS <no-reply@example.com>"),
+  SMTP_FROM: z
+    .string()
+    .optional()
+    .transform((v) => v?.trim() || "Construction CMS <no-reply@example.com>"),
   GOOGLE_ANALYTICS_ID: z
     .string()
     .regex(/^G-[A-Z0-9]+$/, "Expected a GA4 measurement ID such as G-XXXXXXX")

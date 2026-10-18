@@ -7,6 +7,16 @@ import { toast } from "sonner";
 
 import { FormField } from "@/components/admin/form/form-field";
 import { useActionForm } from "@/components/admin/form/use-action-form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,7 +74,7 @@ function RoleDialog({
   const mine = new Set(actorPermissions);
   const [selected, setSelected] = useState(new Set(role?.permissions ?? []));
   const readOnly = role?.key === "SUPER_ADMIN" || isOwnRole;
-  const { formAction, pending, errorFor } = useActionForm(
+  const { onSubmit, pending, errorFor } = useActionForm(
     saveRoleAction.bind(null, role?.id ?? null),
     labels,
     {
@@ -96,8 +106,8 @@ function RoleDialog({
                 : r.description}
           </DialogDescription>
         </DialogHeader>
-        <form action={formAction} noValidate className="flex min-h-0 flex-1 flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField id="r-name" label={r.fields.name} error={errorFor("name")}>
               {(a) => <Input {...a} name="name" defaultValue={role?.name} maxLength={80} />}
             </FormField>
@@ -221,8 +231,10 @@ export function RoleList({
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<RoleView | null | "new">(null);
+  const [deleting, setDeleting] = useState<RoleView | null>(null);
   const [pending, start] = useTransition();
   const r = labels.roles;
+  const c = labels.common;
 
   return (
     <>
@@ -232,7 +244,7 @@ export function RoleList({
           {r.new}
         </Button>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {roles.map((role) => (
           <Card key={role.id}>
             <CardHeader>
@@ -259,15 +271,7 @@ export function RoleList({
                     disabled={pending || role.userCount > 0}
                     title={role.userCount > 0 ? r.deleteHint : undefined}
                     aria-label={`${labels.common.delete}: ${role.name}`}
-                    onClick={() =>
-                      start(async () => {
-                        const res = await deleteRoleAction(role.id);
-                        if (res.ok) {
-                          toast.success(labels.common.toast.deleted);
-                          router.refresh();
-                        } else toast.error(labels.common.errors[res.error]);
-                      })
-                    }
+                    onClick={() => setDeleting(role)}
                   >
                     <Trash2Icon aria-hidden="true" />
                   </Button>
@@ -284,6 +288,39 @@ export function RoleList({
           </Card>
         ))}
       </div>
+      <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{c.confirmDeleteTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="block font-medium text-foreground">{deleting?.name}</span>
+              {c.confirmDeleteDescription}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>{c.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={pending}
+              variant="destructive"
+              onClick={(event) => {
+                event.preventDefault();
+                const role = deleting;
+                if (!role) return;
+                start(async () => {
+                  const res = await deleteRoleAction(role.id);
+                  if (res.ok) {
+                    toast.success(c.toast.deleted);
+                    setDeleting(null);
+                    router.refresh();
+                  } else toast.error(c.errors[res.error]);
+                });
+              }}
+            >
+              {pending ? c.deleting : c.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {editing ? (
         <RoleDialog
           role={editing === "new" ? null : editing}

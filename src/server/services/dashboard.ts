@@ -1,9 +1,10 @@
 import "server-only";
 
-import type { InquiryStatus, ProjectStatus, QuoteStatus } from "@/generated/prisma/client";
+import type { ProjectStatus, QuoteStatus } from "@/generated/prisma/client";
 import { hasPermission } from "@/lib/auth/permissions";
 import type { CurrentUser } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
+import { countUnreadChats, latestUnreadChatAt } from "@/server/services/chat";
 
 const OPEN_QUOTE_STATUSES: QuoteStatus[] = ["NEW", "REVIEWING"];
 
@@ -157,15 +158,23 @@ async function monthlyRequests(user: CurrentUser): Promise<MonthlyRequests[]> {
   }));
 }
 
-/** Header bell: unhandled requests the user is allowed to see. */
+/** Header bell: requests nobody on staff has opened yet, in the queues this user can see. */
 export async function getNotificationSummary(user: CurrentUser) {
-  const [newInquiries, newQuotes] = await Promise.all([
+  const [newInquiries, newQuotes, newChats, latestChatAt, pendingUsers] = await Promise.all([
     when(hasPermission(user, "inquiries.view"), () =>
-      db.inquiry.count({ where: { status: "NEW" satisfies InquiryStatus, archivedAt: null } }),
+      db.inquiry.count({ where: { staffReadAt: null, archivedAt: null } }),
     ),
     when(hasPermission(user, "quotes.view"), () =>
-      db.quoteRequest.count({ where: { status: "NEW" satisfies QuoteStatus, archivedAt: null } }),
+      db.quoteRequest.count({ where: { staffReadAt: null, archivedAt: null } }),
+    ),
+    // Open chats with a visitor message nobody has read yet.
+    when(hasPermission(user, "chats.view"), countUnreadChats),
+    // Lets the CMS alert only when a genuinely new message arrives.
+    when(hasPermission(user, "chats.view"), latestUnreadChatAt),
+    // Registration requests, for those who can approve them.
+    when(hasPermission(user, "users.update"), () =>
+      db.user.count({ where: { status: "PENDING", deletedAt: null, requestSeenAt: null } }),
     ),
   ]);
-  return { newInquiries, newQuotes };
+  return { newInquiries, newQuotes, newChats, latestChatAt: latestChatAt ?? null, pendingUsers };
 }

@@ -22,7 +22,7 @@ export type UserFormValues = {
   name: string;
   email: string;
   roleId: string;
-  status: "ACTIVE" | "DISABLED";
+  status: "ACTIVE" | "DISABLED" | "PENDING";
   preferredLocale: string;
   avatar: PickedImage | null;
 };
@@ -42,7 +42,7 @@ export function UserForm({ action, initial, roles, isSelf = false, labels }: Pro
   const u = labels.users;
   const c = labels.common;
   const [mode, setMode] = useState<"email" | "set">("email");
-  const { formAction, pending, errorFor } = useActionForm(action, labels, {
+  const { onSubmit, pending, errorFor } = useActionForm(action, labels, {
     successMessage: isNew ? u.created : c.toast.saved,
     onSuccess: (data) => {
       if (isNew && data) {
@@ -56,8 +56,8 @@ export function UserForm({ action, initial, roles, isSelf = false, labels }: Pro
   });
 
   return (
-    <form action={formAction} noValidate className="grid gap-6">
-      <div className="grid gap-6 lg:grid-cols-2">
+    <form onSubmit={onSubmit} noValidate className="grid gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <FormSection title={u.sections.profile}>
           <FormField id="u-name" label={u.fields.name} error={errorFor("name")}>
             {(a) => (
@@ -125,7 +125,8 @@ export function UserForm({ action, initial, roles, isSelf = false, labels }: Pro
                     <NativeSelect
                       {...a}
                       name="roleId"
-                      defaultValue={initial?.roleId ?? ""}
+                      // A registration request has no real role yet: one must be chosen.
+                      defaultValue={initial?.status === "PENDING" ? "" : (initial?.roleId ?? "")}
                       className="w-full"
                     >
                       <NativeSelectOption value="" disabled>
@@ -147,6 +148,9 @@ export function UserForm({ action, initial, roles, isSelf = false, labels }: Pro
                       defaultValue={initial?.status ?? "ACTIVE"}
                       className="w-full"
                     >
+                      {initial?.status === "PENDING" ? (
+                        <NativeSelectOption value="PENDING">{u.status.PENDING}</NativeSelectOption>
+                      ) : null}
                       <NativeSelectOption value="ACTIVE">{u.status.ACTIVE}</NativeSelectOption>
                       <NativeSelectOption value="DISABLED">{u.status.DISABLED}</NativeSelectOption>
                     </NativeSelect>
@@ -161,14 +165,14 @@ export function UserForm({ action, initial, roles, isSelf = false, labels }: Pro
               <fieldset className="grid gap-2">
                 <legend className="mb-1 text-sm font-medium">{u.fields.passwordMode}</legend>
                 {(["email", "set"] as const).map((m) => (
-                  <label key={m} className="flex items-center gap-2 text-sm">
+                  <label key={m} className="flex min-h-8 items-center gap-2 text-sm">
                     <input
                       type="radio"
                       name="passwordMode"
                       value={m}
                       checked={mode === m}
                       onChange={() => setMode(m)}
-                      className="accent-primary"
+                      className="size-4 accent-primary"
                     />
                     {m === "email" ? u.fields.modeEmail : u.fields.modeSet}
                   </label>

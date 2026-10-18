@@ -27,17 +27,15 @@ export function SiteFooter({
   t: Messages["site"];
 }) {
   const f = t.footer;
-  const heading = "mb-4 text-xs font-semibold tracking-widest text-primary-foreground/60 uppercase";
-  const link = "text-primary-foreground/80 transition-colors hover:text-primary-foreground";
+  const heading = "mb-4 text-xs font-semibold tracking-widest text-brand-foreground/60 uppercase";
+  const link = "text-brand-foreground/80 transition-colors hover:text-brand-foreground";
   return (
-    <footer className="bg-primary text-primary-foreground">
-      <div className="container-site grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-4 lg:py-20">
+    <footer className="bg-brand text-brand-foreground">
+      <div className="container-site grid grid-cols-1 gap-10 py-14 md:grid-cols-2 lg:grid-cols-4 lg:py-20">
         <div className="grid content-start gap-4">
           <p className="text-xl type-heading">{shell.name}</p>
           {shell.description ? (
-            <p className="text-sm leading-relaxed text-primary-foreground/75">
-              {shell.description}
-            </p>
+            <p className="text-sm leading-relaxed text-brand-foreground/75">{shell.description}</p>
           ) : null}
         </div>
 
@@ -79,7 +77,7 @@ export function SiteFooter({
 
         <div>
           <h2 className={heading}>{f.contact}</h2>
-          <address className="grid gap-3 text-sm text-primary-foreground/80 not-italic">
+          <address className="grid gap-3 text-sm text-brand-foreground/80 not-italic">
             {shell.contact.address ? (
               <p className="flex gap-2">
                 <MapPinIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -119,8 +117,8 @@ export function SiteFooter({
           ) : null}
         </div>
       </div>
-      <div className="border-t border-primary-foreground/15">
-        <div className="container-site flex flex-col gap-3 py-6 text-xs text-primary-foreground/65 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-t border-brand-foreground/15">
+        <div className="container-site flex flex-col gap-3 py-6 text-xs text-brand-foreground/65 sm:flex-row sm:items-center sm:justify-between">
           <p>
             © {new Date().getFullYear()} {shell.name}. {f.rights}
           </p>

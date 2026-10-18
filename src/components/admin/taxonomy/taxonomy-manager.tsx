@@ -58,7 +58,7 @@ function EditDialog({
 }) {
   const router = useRouter();
   const t = labels.taxonomy;
-  const { formAction, pending, errorFor } = useActionForm(
+  const { onSubmit, pending, errorFor } = useActionForm(
     saveTaxonomyAction.bind(null, item?.id ?? null),
     labels,
     {
@@ -78,7 +78,7 @@ function EditDialog({
             {item ? `${t.editItem}: ${item.name}` : `${t.add}: ${group.title}`}
           </DialogTitle>
         </DialogHeader>
-        <form action={formAction} noValidate className="grid gap-4">
+        <form onSubmit={onSubmit} noValidate className="grid gap-4">
           <input type="hidden" name="kind" value={group.kind} />
           {group.kind === "category" ? (
             <input type="hidden" name="type" value={group.type} />
@@ -157,7 +157,7 @@ export function TaxonomyManager({ groups, labels }: { groups: Group[]; labels: L
   const c = labels.common;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {groups.map((group) => (
         <Card key={group.title}>
           <CardHeader>
@@ -232,7 +232,7 @@ export function TaxonomyManager({ groups, labels }: { groups: Group[]; labels: L
             <AlertDialogCancel disabled={pending}>{c.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={pending}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              variant="destructive"
               onClick={(event) => {
                 event.preventDefault();
                 if (!deleting) return;

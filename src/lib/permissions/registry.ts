@@ -59,6 +59,11 @@ export const permissionRegistry = {
     "quotes.update": "Change status, assign, add notes and contact customers",
     "quotes.delete": "Archive and delete quote requests",
   },
+  chats: {
+    "chats.view": "Read live chats from the website",
+    "chats.reply": "Reply to, assign, close and reopen chats",
+    "chats.delete": "Delete chat conversations",
+  },
   users: {
     "users.view": "View staff accounts",
     "users.create": "Create staff accounts",

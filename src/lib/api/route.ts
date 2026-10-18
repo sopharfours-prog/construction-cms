@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { Prisma } from "@/generated/prisma/client";
-import { AuthorizationError, authorize } from "@/lib/auth/session";
+import { AuthorizationError, authorize, getCurrentUser } from "@/lib/auth/session";
 import type { PermissionKey } from "@/lib/permissions/registry";
 import { getRequestInfo } from "@/lib/security/request-info";
 import { isSameOrigin } from "@/lib/security/same-origin";
@@ -47,7 +47,8 @@ type Handler<P> = (
  * and mapping of every failure to a safe JSON response.
  */
 export function apiRoute<P = Record<string, never>>(
-  permission: PermissionKey,
+  /** null: any signed-in user (endpoints for one's own account). */
+  permission: PermissionKey | null,
   handler: Handler<P>,
 ) {
   return async (request: Request, context: { params: Promise<P> }): Promise<Response> => {
@@ -55,7 +56,8 @@ export function apiRoute<P = Record<string, never>>(
       return apiError("forbidden", { reason: "origin" });
     }
     try {
-      const user = await authorize(permission);
+      const user = permission ? await authorize(permission) : await getCurrentUser();
+      if (!user) throw new AuthorizationError(401);
       const result = await handler(request, {
         user,
         request: getRequestInfo(request.headers),
@@ -76,8 +78,12 @@ export function apiRoute<P = Record<string, never>>(
         for (const issue of error.issues) issues[issue.path.join(".")] ??= issue.message;
         return apiError("validation", { issues });
       }
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025")
-        return apiError("notFound");
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2025") return apiError("notFound");
+        // Unique value taken / referenced row gone: the caller's input, not a server fault.
+        if (error.code === "P2002") return apiError("conflict");
+        if (error.code === "P2003") return apiError("validation", { reason: "invalidReference" });
+      }
       console.error(`[api] ${request.method} ${new URL(request.url).pathname} failed`, error);
       return apiError("unexpected");
     }

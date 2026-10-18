@@ -14,8 +14,8 @@ export default async function ForgotPasswordPage() {
 
   return (
     <>
-      <h1 className="text-3xl type-heading">{t.forgot.title}</h1>
-      <p className="mt-2 mb-8 text-muted-foreground">{t.forgot.description}</p>
+      <h1 className="text-2xl type-heading">{t.forgot.title}</h1>
+      <p className="mt-1.5 mb-6 text-sm text-muted-foreground">{t.forgot.description}</p>
       <ForgotPasswordForm labels={toAuthLabels(t)} />
     </>
   );

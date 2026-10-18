@@ -103,7 +103,7 @@ describe("services", () => {
 });
 
 describe("news", () => {
-  it("requires a future time for scheduled articles", () => {
+  it("requires a time for scheduled articles", () => {
     const base = { slug: "n", status: "SCHEDULED", "translations.lo.title": "T" };
     expect(
       newsInputSchema.safeParse(formDataToObject(Object.assign(new FormData(), {}))).success,
@@ -113,10 +113,41 @@ describe("news", () => {
     expect(newsInputSchema.safeParse(formDataToObject(noDate)).error?.issues[0]?.message).toBe(
       "scheduleNeedsDate",
     );
-    noDate.append("publishedAt", "2020-01-01T10:00");
-    expect(newsInputSchema.safeParse(formDataToObject(noDate)).error?.issues[0]?.message).toBe(
-      "scheduleInPast",
+  });
+
+  it("refuses a past time when scheduling, but keeps a live scheduled article editable", async () => {
+    const vientiane = (date: Date) =>
+      new Date(date.getTime() + 7 * 3600_000).toISOString().slice(0, 16);
+    const fields = (publishedAt: string) => ({
+      slug: `news-past-${tag}`,
+      status: "SCHEDULED",
+      publishedAt,
+      "translations.lo.title": "ຂ່າວ",
+    });
+    const past = new Date(Date.now() - 2 * 86_400_000);
+    // Creating with a past time is refused.
+    await expect(
+      news.createNews(parse(newsInputSchema, fields(vientiane(past))), ctx()),
+    ).rejects.toMatchObject({ field: "publishedAt", messageKey: "scheduleInPast" });
+
+    // An article scheduled earlier whose time has now passed (it is live).
+    const { id } = await news.createNews(
+      parse(newsInputSchema, fields(vientiane(new Date(Date.now() + 86_400_000)))),
+      ctx(),
     );
+    cleanup.push(() => db.news.deleteMany({ where: { id } }));
+    await db.news.update({ where: { id }, data: { publishedAt: past } });
+
+    // Editing it with its time unchanged saves, and the time is kept.
+    await news.updateNews(id, parse(newsInputSchema, fields(vientiane(past))), ctx());
+    const kept = await db.news.findUniqueOrThrow({ where: { id } });
+    expect(Math.abs(kept.publishedAt!.getTime() - past.getTime())).toBeLessThan(60_000);
+
+    // Moving it to a different past time is still refused.
+    const earlier = new Date(past.getTime() - 86_400_000);
+    await expect(
+      news.updateNews(id, parse(newsInputSchema, fields(vientiane(earlier))), ctx()),
+    ).rejects.toMatchObject({ field: "publishedAt", messageKey: "scheduleInPast" });
   });
 
   it("schedules in Vientiane time and needs news.publish to change status", async () => {

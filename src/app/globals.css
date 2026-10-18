@@ -38,6 +38,14 @@
   --primary: var(--brand-primary);
   --primary-foreground: var(--brand-primary-foreground);
 
+  /*
+   * Brand surfaces (hero, footer, header bar, sign-in panel). Unlike --primary,
+   * which dark mode lightens so buttons and links stay legible, these keep the
+   * brand colour in both themes: the pair is contrast-checked in Settings.
+   */
+  --brand: var(--brand-primary);
+  --brand-foreground: var(--brand-primary-foreground);
+
   --secondary: #eeede9;
   --secondary-foreground: #1f2328;
 
@@ -50,10 +58,14 @@
 
   --highlight: var(--brand-accent);
   --highlight-foreground: var(--brand-accent-foreground);
+  /* Accent-coloured text on page backgrounds: the accent deepened to reach 4.5:1 on white */
+  --highlight-ink: color-mix(in oklab, var(--brand-accent) 70%, black);
 
   --destructive: #b42318;
+  --destructive-foreground: #ffffff;
   --success: #1e7a46;
-  --warning: #a8661a;
+  --success-foreground: #ffffff;
+  --warning: #9a5c14;
   --info: #2c5d94;
 
   --border: #dcdad5;
@@ -109,8 +121,13 @@
   --accent: #252a2f;
   --accent-foreground: #eceef0;
 
+  --highlight-ink: var(--brand-accent);
+
   --destructive: #f0645a;
+  /* Dark text: the dark-theme status colours are too light for white */
+  --destructive-foreground: #101316;
   --success: #4fbf80;
+  --success-foreground: #101316;
   --warning: #e0a14a;
   --info: #7fa8d8;
 
@@ -141,6 +158,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -149,8 +168,11 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
+  --color-highlight-ink: var(--highlight-ink);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-info: var(--info);
   --color-border: var(--border);
@@ -230,7 +252,7 @@
   font-weight: 720;
   letter-spacing: -0.01em;
   line-height: 0.98;
-  text-wrap: balance;
+  text-wrap-style: balance;
 }
 
 @utility type-heading {
@@ -238,7 +260,7 @@
   font-weight: 650;
   letter-spacing: -0.005em;
   line-height: 1.15;
-  text-wrap: balance;
+  text-wrap-style: balance;
 }
 
 @utility container-site {

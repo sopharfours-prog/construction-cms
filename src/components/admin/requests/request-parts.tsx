@@ -82,7 +82,7 @@ export function ContactLinks({
   return (
     <div className="flex flex-wrap gap-2">
       <Button asChild variant="outline" size="sm">
-        <a href={`mailto:${encodeURIComponent(email)}`}>
+        <a href={`mailto:${email}`}>
           <MailIcon aria-hidden="true" />
           {labels.email}
         </a>
@@ -102,13 +102,17 @@ export function ContactLinks({
 /** Two-column definition list for request details. */
 export function Details({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
-    <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[10rem_1fr]">
-      {rows.map(([label, value]) => (
-        <div key={label} className="contents">
-          <dt className="text-muted-foreground">{label}</dt>
-          <dd className="break-words">{value ?? "—"}</dd>
-        </div>
-      ))}
-    </dl>
+    // Sized by its card, not the window: the same list sits in the wide main
+    // column and in the narrow side column.
+    <div className="@container">
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-3 text-sm @lg:grid-cols-[10rem_minmax(0,1fr)]">
+        {rows.map(([label, value]) => (
+          <div key={label} className="contents">
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="wrap-anywhere">{value ?? "—"}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }

@@ -43,7 +43,7 @@ export default async function RequestQuotePage({ params }: PageProps<"/[locale]/
         crumbLabel={t.public.breadcrumb}
         crumbs={[{ href: localizedPath(locale, "/"), label: t.site.nav.home }, { label: q.title }]}
       />
-      <div className="container-site grid gap-12 py-14 lg:grid-cols-[1fr_18rem] lg:py-20">
+      <div className="container-site grid grid-cols-1 gap-12 py-14 lg:grid-cols-[1fr_18rem] lg:py-20">
         <section
           aria-labelledby="quote-form"
           className="border-t-4 border-highlight bg-card p-6 shadow-sm sm:p-8"
