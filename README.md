@@ -67,6 +67,22 @@ npm run dev                      # http://localhost:3000 → /lo, CMS at /admin
 Sign in at `/admin/login` with `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`,
 then remove the password from `.env`.
 
+### Local links
+
+With `npm run dev` running:
+
+| What                  | Link                                                                         |
+| --------------------- | ---------------------------------------------------------------------------- |
+| Website (Lao)         | [http://localhost:3000/lo](http://localhost:3000/lo)                         |
+| Website (English)     | [http://localhost:3000/en](http://localhost:3000/en)                         |
+| CMS (admin)           | [http://localhost:3000/admin](http://localhost:3000/admin)                   |
+| Staff account request | [http://localhost:3000/admin/register](http://localhost:3000/admin/register) |
+
+Sign-in details are never kept in this repository. Use the administrator
+created by `npm run db:seed` (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` in
+your own `.env`), or ask an existing administrator for an account: request
+one at `/admin/register` and they approve it under **Users**.
+
 ### Build and run in production mode
 
 ```bash
